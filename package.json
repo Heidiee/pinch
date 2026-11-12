@@ -1,0 +1,17 @@
+{
+  "name": "pinch-wishlist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared wishlist API and frontend server",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongodb": "^6.14.2"
+  }
+}
