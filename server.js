@@ -9,7 +9,7 @@ const FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDu
 const TEXT_LIMITS = { name: 200, currency: 10, goal: 100, urgency: 100, lockDuration: 100, feeling: 100 };
 const FRONTEND_FILES = new Set([
   'index.html', 'app.js', 'journey.js', 'add-flow.js', 'onboarding.js',
-  'journey.css', 'add-flow.css', 'onboarding.css', 'pinch-logo.svg'
+  'journey.css', 'add-flow.css', 'onboarding.css', 'button-states.css', 'pinch-logo.svg'
 ]);
 
 function validateItem(body) {

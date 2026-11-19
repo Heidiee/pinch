@@ -1,0 +1,6 @@
+.ob-next:active,
+.ob-back:active,
+.pj-next:active,
+.af-next:active {
+    box-shadow: none;
+}
