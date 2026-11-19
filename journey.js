@@ -107,12 +107,110 @@
     const categories = [['All','grey'],['Essentials','purple'],['Education','green'],['Fashion','blue'],['Travel','purple']];
     const date = new Date();
     const dates = Array.from({length: 7}, (_, i) => { const d = new Date(date.getFullYear(), date.getMonth(), date.getDate() + i); return `<div class="pj-date"><span>${d.toLocaleDateString(undefined,{weekday:'short'})}</span><div>${d.getDate()}${img('lock')}</div></div>`; }).join('');
-    root.innerHTML = `<section class="pj-home" data-node-id="25:3072"><div class="pj-home-inner"><h1>Your Wishlist</h1><label class="pj-search">${img('search')}<span class="pj-sr">Search item</span><input type="search" placeholder="Search item"></label><div class="pj-filters">${categories.map(([v,c]) => tag(v,c,v === 'All','filter')).join('')}</div><div class="pj-card pj-calendar"><div class="pj-card-heading"><h2>Calendar</h2><div class="pj-calendar-icons">${img('calendar-month')}${img('calendar-today')}</div></div><p>${item && item.lockDuration ? `Your latest item is locked for ${esc(item.lockDuration)}.` : 'Your upcoming unlocks will appear here.'}</p><div class="pj-dates">${dates}</div></div>${cards || '<div class="pj-empty">Your wishlist is empty. Add an item to get started.</div>'}<p class="pj-no-results" hidden>No matching items.</p></div><nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home">${img('home')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Information">${img('info')}</button></nav></section>`;
+    let calendarView = 'week';
+    const calendarCard = () => {
+      const monthView = calendarView === 'month';
+      const description = monthView
+        ? nextUnlockMessage(items)
+        : item && item.lockDuration ? `Your latest item is locked for ${esc(item.lockDuration)}.` : 'Your upcoming unlocks will appear here.';
+      return `<div class="pj-card pj-calendar"><div class="pj-card-heading"><h2>Calendar</h2><div class="pj-calendar-icons"><button type="button" class="pj-calendar-toggle" data-action="calendar-month" aria-label="Show monthly calendar" aria-pressed="${monthView}">${img(monthView ? 'calendar-today' : 'calendar-month')}</button><button type="button" class="pj-calendar-toggle" data-action="calendar-week" aria-label="Show weekly calendar" aria-pressed="${!monthView}">${img(monthView ? 'calendar-month' : 'calendar-today')}</button></div></div><p>${description}</p>${monthView ? renderMonthCalendar(items) : `<div class="pj-dates">${dates}</div>`}</div>`;
+    };
+    root.innerHTML = `<section class="pj-home" data-node-id="25:3072"><div class="pj-home-inner"><h1>Your Wishlist</h1><label class="pj-search">${img('search')}<span class="pj-sr">Search item</span><input type="search" placeholder="Search item"></label><div class="pj-filters">${categories.map(([v,c]) => tag(v,c,v === 'All','filter')).join('')}</div>${calendarCard()}${cards || '<div class="pj-empty">Your wishlist is empty. Add an item to get started.</div>'}<p class="pj-no-results" hidden>No matching items.</p></div><nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home">${img('home')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Information">${img('info')}</button></nav></section>`;
     let filter = 'all';
     const search = root.querySelector('.pj-search input');
     const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (filter === 'all' || card.dataset.category === filter) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
-    root.onclick = (event) => { const button = event.target.closest('[data-action]'); if (!button || !root.contains(button)) return; if (button.dataset.action === 'add') onAdd(); if (button.dataset.action === 'filter') { filter = button.dataset.value.toLowerCase(); root.querySelectorAll('[data-action="filter"]').forEach(b => { const selected = b === button; b.classList.toggle('is-selected',selected); b.setAttribute('aria-pressed',selected); }); update(); } };
+    root.onclick = (event) => {
+      const button = event.target.closest('[data-action]');
+      if (!button || !root.contains(button)) return;
+      if (button.dataset.action === 'add') onAdd();
+      if (button.dataset.action === 'calendar-month' || button.dataset.action === 'calendar-week') {
+        calendarView = button.dataset.action === 'calendar-month' ? 'month' : 'week';
+        root.querySelector('.pj-calendar').outerHTML = calendarCard();
+      }
+      if (button.dataset.action === 'filter') { filter = button.dataset.value.toLowerCase(); root.querySelectorAll('[data-action="filter"]').forEach(b => { const selected = b === button; b.classList.toggle('is-selected',selected); b.setAttribute('aria-pressed',selected); }); update(); }
+    };
     root.oninput = (event) => { if (event.target === search) update(); };
     root.onchange = null;
+  }
+
+  function getUnlockDate(item) {
+    if (typeof item.createdAt !== 'string') return null;
+    const createdAt = new Date(item.createdAt);
+    if (!Number.isFinite(createdAt.getTime())) return null;
+    const match = String(item.lockDuration || '').trim().match(/^(\d+)\s*(day|week|month)s?$/i);
+    if (!match) return null;
+    const amount = Number(match[1]);
+    if (!Number.isSafeInteger(amount) || amount < 1) return null;
+    const unlockDate = new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate());
+    const unit = match[2].toLowerCase();
+    if (unit === 'month') {
+      const day = unlockDate.getDate();
+      unlockDate.setDate(1);
+      unlockDate.setMonth(unlockDate.getMonth() + amount);
+      unlockDate.setDate(Math.min(day, new Date(unlockDate.getFullYear(), unlockDate.getMonth() + 1, 0).getDate()));
+    } else {
+      unlockDate.setDate(unlockDate.getDate() + amount * (unit === 'week' ? 7 : 1));
+    }
+    return unlockDate;
+  }
+
+  function dateKey(date) {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  }
+
+  function ordinal(day) {
+    const lastTwoDigits = day % 100;
+    const suffix = lastTwoDigits >= 11 && lastTwoDigits <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th');
+    return `${day}${suffix}`;
+  }
+
+  function nextUnlockMessage(items) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextUnlock = items.map(getUnlockDate).filter(date => date && date >= today).sort((a, b) => a - b)[0];
+    if (!nextUnlock) return 'Your upcoming unlocks will appear here.';
+    const month = nextUnlock.toLocaleDateString(undefined, { month: 'long' });
+    return `Your next item unlocks on the ${ordinal(nextUnlock.getDate())} of ${month}, congratulations!`;
+  }
+
+  function renderMonthCalendar(items) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const leadingDays = (firstOfMonth.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cellCount = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
+    const scheduledDays = new Map();
+    const schedules = items.map(item => {
+      const createdAt = typeof item.createdAt === 'string' ? new Date(item.createdAt) : null;
+      const unlockDate = getUnlockDate(item);
+      return createdAt && Number.isFinite(createdAt.getTime()) && unlockDate
+        ? { createdAt, unlockDate }
+        : null;
+    }).filter(Boolean);
+    const addScheduledDay = (day, status) => {
+      if (day.getFullYear() !== year || day.getMonth() !== month) return;
+      const key = dateKey(day);
+      if (status === 'unlocked' || !scheduledDays.has(key)) scheduledDays.set(key, status);
+    };
+    schedules.forEach(({ createdAt, unlockDate }) => {
+      addScheduledDay(createdAt, 'locked');
+      addScheduledDay(unlockDate, 'unlocked');
+    });
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      .map(day => `<span class="pj-calendar-weekday" role="columnheader">${day}</span>`).join('');
+    const cells = Array.from({ length: cellCount }, (_, index) => {
+      const day = index - leadingDays + 1;
+      if (day < 1 || day > daysInMonth) return '<span class="pj-calendar-day is-empty" aria-hidden="true"></span>';
+      const current = new Date(year, month, day);
+      const status = scheduledDays.get(dateKey(current));
+      const label = current.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+      const statusLabel = status === 'locked' ? ', locked' : status === 'unlocked' ? ', unlocked' : '';
+      const lockIcon = status === 'locked' ? img('month-lock') : status === 'unlocked' ? img('month-lock-open') : '';
+      return `<div class="pj-calendar-day${status ? ` is-${status}` : ''}" role="gridcell" aria-label="${label}${statusLabel}"><span>${day}</span>${lockIcon}</div>`;
+    }).join('');
+    const label = firstOfMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    return `<div class="pj-calendar-grid" role="grid" aria-label="${label}">${weekdays}${cells}</div>`;
   }
 })();

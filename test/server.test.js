@@ -2,6 +2,7 @@
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
+const { ObjectId } = require('mongodb');
 const { createApp } = require('../server');
 
 let server;
@@ -44,6 +45,16 @@ test('creates and retrieves UI-shaped items with consistent response schemas', a
   assert.deepEqual(await list.json(), { items: [item] });
   const minimal = await post({ name: 'Pen', price: 0 });
   assert.deepEqual(await minimal.json(), { item: { id: '2', name: 'Pen', price: 0, currency: 'CAD', image: null, goal: '', urgency: '', lockDuration: '', feeling: '' } });
+});
+
+test('exposes MongoDB creation timestamps for calendar scheduling', async () => {
+  const createdAt = new Date('2026-10-18T00:00:00.000Z');
+  documents = [{ _id: ObjectId.createFromTime(createdAt.getTime() / 1000), name: 'Calendar item', lockDuration: '1 Week' }];
+  const response = await fetch(`${base}/api/items`);
+  assert.equal(response.status, 200);
+  const { items } = await response.json();
+  assert.equal(items[0].createdAt, createdAt.toISOString());
+  documents = [];
 });
 
 test('rejects invalid fields without inserting anything', async () => {
@@ -96,7 +107,7 @@ test('returns JSON errors for malformed or oversized requests and database failu
 });
 
 test('serves only explicit frontend assets, not backend or hidden files', async () => {
-  for (const pathname of ['/', '/index.html', '/app.js', '/onboarding.js', '/journey.css', '/assets/add/logo.svg', '/assets/journey/page1.svg']) {
+  for (const pathname of ['/', '/index.html', '/app.js', '/onboarding.js', '/journey.css', '/calendar.css', '/assets/add/logo.svg', '/assets/journey/page1.svg', '/assets/journey/month-lock.svg', '/assets/journey/month-lock-open.svg']) {
     const response = await fetch(`${base}${pathname}`);
     assert.equal(response.status, 200, pathname);
   }

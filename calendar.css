@@ -1,0 +1,85 @@
+.pj-calendar-toggle {
+    display: block;
+    border: 0;
+    border-radius: 8px;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    line-height: 0;
+}
+
+.pj-calendar-toggle img {
+    width: 30px;
+    height: 25px;
+}
+
+.pj-calendar-toggle:focus-visible {
+    outline: 2px solid #0064a7;
+    outline-offset: 2px;
+}
+
+.pj-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 13px 10px;
+    width: 100%;
+}
+
+.pj-calendar-weekday {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6a6b68;
+    font-size: 12px;
+    line-height: 1;
+    text-align: center;
+}
+
+.pj-calendar-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: 48px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    background: #fdfdfd;
+    color: #6a6b68;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.pj-calendar-day.is-empty {
+    visibility: hidden;
+}
+
+.pj-calendar-day.is-locked,
+.pj-calendar-day.is-unlocked {
+    justify-content: space-between;
+}
+
+.pj-calendar-day.is-locked {
+    background: #090708;
+    color: #fdfdfd;
+}
+
+.pj-calendar-day.is-unlocked {
+    color: #535b00;
+}
+
+.pj-calendar-day img {
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 360px) {
+    .pj-calendar-grid {
+        column-gap: 4px;
+    }
+
+    .pj-calendar-day {
+        padding-right: 3px;
+        padding-left: 3px;
+    }
+}

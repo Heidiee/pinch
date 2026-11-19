@@ -1,6 +1,15 @@
-.ob-next:active,
-.ob-back:active,
-.pj-next:active,
-.af-next:active {
+button:active,
+a:active,
+[role="button"]:active,
+label:active,
+input[type="button"]:active,
+input[type="submit"]:active {
     box-shadow: none;
+}
+
+:where(button, a, [role="button"], label)[aria-pressed="true"]:not(:focus-visible),
+:where(button, a, [role="button"], label).is-selected:not(:focus-visible) {
+    box-shadow: none;
+    outline: none;
+    outline-offset: 0;
 }

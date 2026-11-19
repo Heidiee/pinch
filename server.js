@@ -9,7 +9,7 @@ const FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDu
 const TEXT_LIMITS = { name: 200, currency: 10, goal: 100, urgency: 100, lockDuration: 100, feeling: 100 };
 const FRONTEND_FILES = new Set([
   'index.html', 'app.js', 'journey.js', 'add-flow.js', 'onboarding.js',
-  'journey.css', 'add-flow.css', 'onboarding.css', 'button-states.css', 'pinch-logo.svg'
+  'journey.css', 'calendar.css', 'add-flow.css', 'onboarding.css', 'button-states.css', 'pinch-logo.svg'
 ]);
 
 function validateItem(body) {
@@ -91,6 +91,8 @@ function createApp(collection) {
 function serializeItem(item) {
   const result = { id: String(item._id) };
   for (const field of FIELDS) result[field] = item[field];
+  const createdAt = item.createdAt instanceof Date ? item.createdAt : item._id?.getTimestamp?.();
+  if (createdAt instanceof Date && Number.isFinite(createdAt.getTime())) result.createdAt = createdAt.toISOString();
   return result;
 }
 
