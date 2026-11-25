@@ -34,6 +34,8 @@ public/                 Everything the browser loads
     calendar.js         Home calendar: week / month views, paging, day agenda
     device.js           Desktop preview: fits the iPhone frame (css/device.css) to the window
   assets/               SVG icons and illustrations
+api/index.js            Vercel entry: runs the API as a serverless function, reusing one MongoDB connection
+vercel.json             Vercel config: serve public/ as static files, send /api/* to api/index.js
 src/server/             Node.js backend
   index.js              Entry point: connects to MongoDB and starts listening
   app.js                Express app: API routes, static files, errors
@@ -42,6 +44,17 @@ src/server/             Node.js backend
   validation.js         Request validation and default settings
 test/                   API tests (run with npm test)
 ```
+
+## Deploying to Vercel
+
+Locally `npm start` runs one long-lived server. On Vercel there is no long-lived server: `public/` is served as static files, and every `/api/...` request runs `api/index.js` as a serverless function. That function builds the same Express app and keeps its MongoDB connection open between requests while Vercel keeps it warm.
+
+1. **MongoDB Atlas.** Use a database user with read/write access. Under *Network Access*, allow `0.0.0.0/0`, because Vercel functions don't have fixed IP addresses (or use Vercel's MongoDB Atlas integration, which sets this up). Copy the `mongodb+srv://…` connection string.
+2. **Vercel project.** *Add New → Project*, import this GitHub repository. The settings come from `vercel.json` (no build step, output directory `public`), so the defaults are fine.
+3. **Environment variables.** In the project settings add `MONGODB_URI` (the Atlas connection string) and optionally `MONGODB_DB_NAME` (defaults to `pinch`). Don't add `PORT`.
+4. **Deploy**, then open `/api/items` on the deployment URL: it should return your items as JSON. If it returns `503 {"error":"Database unavailable"}`, check the connection string and Atlas network access; the function logs say the same.
+
+Every push to `main` deploys again automatically once the project is connected. There is no login, so anyone with the URL can change the shared wishlist; consider Vercel's Deployment Protection before sharing it.
 
 ## API
 
