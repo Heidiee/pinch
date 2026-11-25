@@ -54,7 +54,7 @@ html.pd-locked, html.pd-locked body { overflow: hidden; }
 .pd-tag { display: inline-block; padding: 5px 8px; border: 1.5px solid var(--pj-ink); border-radius: 5px; font-size: var(--pj-text-chip); line-height: var(--pj-leading); letter-spacing: -.16px; }
 .pd-price { margin: 0; font-size: var(--pj-text-chip); font-weight: var(--pj-weight-medium); line-height: var(--pj-leading); }
 
-.pd-tabs { display: flex; gap: 3px; padding: 3px; border-radius: 7px; background: #efedee; }
+.pd-tabs { display: flex; gap: 3px; margin-top: 20px; padding: 3px; border-radius: 7px; background: #efedee; } /* extra space below the price */
 .pd-sheet .pd-tabs [role="tab"] { flex: 1; min-width: 0; padding: 8px 4px; border: 1.5px solid transparent; border-radius: 5px; background: none; color: var(--pj-grey); font-size: var(--pj-text-body); font-weight: var(--pj-weight-regular); line-height: var(--pj-leading); }
 .pd-sheet .pd-tabs [role="tab"][aria-selected="true"] { border-color: var(--pj-ink); background: #fdfdfd; color: var(--pj-ink); font-weight: var(--pj-weight-medium); box-shadow: -2px 3px 0 var(--pj-ink); }
 

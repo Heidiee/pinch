@@ -3,10 +3,30 @@
 .pj-calendar-toggle img { width: 30px; height: 25px; }
 .pj-calendar-toggle:focus-visible { outline: 2px solid #0064a7; outline-offset: 2px; }
 
-.pj-cal-nav { display: flex; align-items: center; gap: 8px; margin-bottom: -6px; }
-.pj-card .pj-cal-period { flex: 1; margin: 0; color: var(--pj-ink); font-size: var(--pj-text-body); font-weight: var(--pj-weight-medium); }
+/* Header (Figma 284:4313): divider, big month name with the year under it, controls on the right. */
+.pj-cal-rule { width: 100%; height: 0; margin: 0; border: 0; border-top: 1px solid #dbdcda; }
+.pj-cal-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.pj-card .pj-cal-month { margin: 0; color: var(--pj-ink); font: var(--pj-font-display); letter-spacing: var(--pj-display-tracking); }
+.pj-card .pj-cal-year { margin: 0; color: var(--pj-grey); font-size: var(--pj-text-body); line-height: var(--pj-leading); }
+.pj-cal-controls { display: flex; align-items: center; gap: 8px; padding-bottom: 2px; }
 .pj-home .pj-cal-arrow { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0 0 2px; border: 0; border-radius: 50%; background: #efedee; color: var(--pj-ink); font-size: 20px; line-height: 1; }
 .pj-home .pj-cal-today { padding: 4px 10px; border: 1.5px solid var(--pj-ink); border-radius: 5px; background: #fdfdfd; color: var(--pj-ink); font-size: var(--pj-text-small); box-shadow: -2px 3px 0 var(--pj-ink); }
+.pj-home .pj-cal-today[hidden] { display: none; }
+
+/* Week strip: days scroll sideways, 40px wide with 15px between, snapping to whole days. */
+.pj-cal-strip { position: relative; display: flex; gap: 15px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -2px; padding: 2px; }
+.pj-cal-strip::-webkit-scrollbar { display: none; }
+.pj-home .pj-cal-cell { display: flex; flex: none; flex-direction: column; align-items: center; gap: 5px; width: 40px; padding: 0; border: 0; background: none; scroll-snap-align: center; }
+.pj-cal-wd { color: var(--pj-grey); font-size: var(--pj-text-small); line-height: 15px; }
+.pj-cal-box { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 40px; height: 54px; padding: 5px 0; border-radius: 10px; background: #efedee; color: var(--pj-grey); font-size: var(--pj-text-body); line-height: 18px; }
+.pj-cal-box img { width: 18px; height: 18px; }
+.pj-cal-cell.is-today .pj-cal-wd, .pj-cal-cell.is-selected .pj-cal-wd { color: var(--pj-ink); }
+.pj-cal-cell.is-today .pj-cal-box { color: var(--pj-ink); font-weight: var(--pj-weight-medium); }
+.pj-cal-cell.has-unlock .pj-cal-box { color: #535b00; }
+.pj-cal-cell.is-selected .pj-cal-box { background: var(--pj-ink); color: #fbf5f1; font-weight: var(--pj-weight-regular); }
+@media (hover: hover) and (pointer: fine) { .pj-cal-cell:not(.is-selected):hover .pj-cal-box { background: #e2e0e1; } }
+.pj-home .pj-cal-cell:focus-visible { outline: none; }
+.pj-cal-cell:focus-visible .pj-cal-box { outline: 2px solid #0064a7; outline-offset: 2px; }
 
 .pj-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 13px 6px; }
 .pj-cal-weekday { color: var(--pj-grey); font-size: var(--pj-text-small); line-height: 1; text-align: center; }
@@ -35,3 +55,6 @@
 @media (max-width: 360px) {
   .pj-cal-grid { gap: 6px 3px; }
 }
+.pj-cal-strip { cursor: grab; }
+.pj-cal-strip.is-dragging { cursor: grabbing; scroll-snap-type: none; }
+.pj-cal-strip.is-dragging .pj-cal-cell { cursor: grabbing; }
