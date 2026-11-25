@@ -132,10 +132,10 @@
         : item && item.lockDuration ? `Your latest item is locked for ${esc(item.lockDuration)}.` : 'Your upcoming unlocks will appear here.';
       return `<div class="pj-card pj-calendar"><div class="pj-card-heading"><h2>Calendar</h2><div class="pj-calendar-icons"><button type="button" class="pj-calendar-toggle" data-action="calendar-month" aria-label="Show monthly calendar" aria-pressed="${monthView}">${img(monthView ? 'calendar-today' : 'calendar-month')}</button><button type="button" class="pj-calendar-toggle" data-action="calendar-week" aria-label="Show weekly calendar" aria-pressed="${!monthView}">${img(monthView ? 'calendar-month' : 'calendar-today')}</button></div></div><p>${description}</p>${monthView ? renderMonthCalendar(items) : `<div class="pj-dates">${dates}</div>`}</div>`;
     };
-    root.innerHTML = `<section class="pj-home" data-node-id="25:3072"><div class="pj-home-inner"><h1>Your Wishlist</h1><label class="pj-search">${img('search')}<span class="pj-sr">Search item</span><input type="search" placeholder="Search item"></label><div class="pj-filters">${categories.map(([v,c]) => tag(v,c,v === 'All','filter')).join('')}</div>${calendarCard()}${cards || '<div class="pj-empty">Your wishlist is empty. Add an item to get started.</div>'}<p class="pj-no-results" hidden>No matching items.</p></div><nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home">${img('home')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Information">${img('info')}</button></nav></section>`;
-    let filter = 'all';
+    root.innerHTML = `<section class="pj-home" data-node-id="25:3072"><div class="pj-home-inner"><h1>Your Wishlist</h1><label class="pj-search">${img('search')}<span class="pj-sr">Search item</span><input type="search" placeholder="Search item"></label><div class="pj-filters">${categories.map(([v,c]) => tag(v,c,v === 'All','filter')).join('')}</div>${calendarCard()}${cards || '<div class="pj-empty">Your wishlist is empty. Add an item to get started.</div>'}<p class="pj-no-results" hidden>No matching items.</p></div><nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home" aria-current="page">${img('home')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Information">${img('info')}</button></nav></section>`;
+    const filters = new Set(); // empty = All
     const search = root.querySelector('.pj-search input');
-    const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (filter === 'all' || card.dataset.category === filter) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
+    const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (!filters.size || filters.has(card.dataset.category)) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
     root.onclick = (event) => {
       const button = event.target.closest('[data-action]');
       if (!button || !root.contains(button)) return;
@@ -144,7 +144,20 @@
         calendarView = button.dataset.action === 'calendar-month' ? 'month' : 'week';
         root.querySelector('.pj-calendar').outerHTML = calendarCard();
       }
-      if (button.dataset.action === 'filter') { filter = button.dataset.value.toLowerCase(); root.querySelectorAll('[data-action="filter"]').forEach(b => { const selected = b === button; b.classList.toggle('is-selected',selected); b.setAttribute('aria-pressed',selected); }); update(); }
+      if (button.dataset.action === 'filter') {
+        // Categories toggle on and off together; "All" clears them.
+        const value = button.dataset.value.toLowerCase();
+        if (value === 'all') filters.clear();
+        else if (filters.has(value)) filters.delete(value);
+        else filters.add(value);
+        root.querySelectorAll('[data-action="filter"]').forEach(b => {
+          const v = b.dataset.value.toLowerCase();
+          const selected = v === 'all' ? !filters.size : filters.has(v);
+          b.classList.toggle('is-selected', selected);
+          b.setAttribute('aria-pressed', selected);
+        });
+        update();
+      }
     };
     root.oninput = (event) => { if (event.target === search) update(); };
     root.onchange = null;
