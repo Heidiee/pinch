@@ -5,13 +5,13 @@
 .pj-item-image { position: relative; }
 
 .pj-item-info { display: flex; flex-direction: column; gap: 5px; }
-.pj-card .pj-unlock { padding: 0 10px 5px; font-size: 14px; line-height: 1.2; color: #6a6b68; }
+.pj-card .pj-unlock { padding: 0 10px 5px; font-size: var(--pj-text-body); line-height: var(--pj-leading); color: var(--pj-grey); }
 .pj-cost-box { border-top: 1.5px solid #dbdcda; border-radius: 5px; background: #fdfdfd; }
-.pj-cost-row { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 41px; padding: 10px; border: 0; background: none; color: #090708; font: 500 14px/1.2 'Plus Jakarta Sans', sans-serif !important; text-align: left; }
+.pj-cost-row { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 41px; padding: 10px; border: 0; background: none; color: #090708; font: var(--pj-weight-medium) var(--pj-text-body)/var(--pj-leading) 'Plus Jakarta Sans', sans-serif !important; text-align: left; }
 .pj-cost-row svg { flex: none; transition: rotate 200ms ease; }
 .pj-cost-row[aria-expanded="true"] svg { rotate: 180deg; }
 .pj-cost-detail { margin: 0; padding: 0 10px 10px; }
-.pj-cost-detail div { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #6a6b68; }
+.pj-cost-detail div { display: flex; justify-content: space-between; padding: 6px 0; font-size: var(--pj-text-body); color: var(--pj-grey); }
 .pj-cost-detail dd { margin: 0; }
 
 /* Action button: collapsed ⋮, expands upward into edit / unlock date / delete / close. */
@@ -20,7 +20,7 @@
 .pj-fab-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #090708; }
 .pj-fab-btn.is-danger { background: #ff7749; color: #fdfdfd; }
 .pj-fab-divider { width: 24px; height: 1.5px; background: rgba(9, 7, 8, .25); }
-.pj-fab-question { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.pj-fab-question { font-size: var(--pj-text-small); font-weight: var(--pj-weight-medium); white-space: nowrap; }
 .pj-home .pj-fab-btn:focus-visible { outline: 2px solid #0064a7; outline-offset: 1px; }
 @keyframes pj-fab-in { from { opacity: 0; scale: .85; } to { opacity: 1; scale: 1; } }
 @media (hover: hover) and (pointer: fine) { .pj-fab-btn:not(.is-danger):hover { background: rgba(9, 7, 8, .08); } }
@@ -31,20 +31,24 @@
 .pj-sheet[open] { animation: pj-sheet-in 220ms cubic-bezier(.2, .8, .2, 1); }
 @keyframes pj-sheet-in { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: none; } }
 .pj-sheet-form { display: flex; flex-direction: column; gap: 16px; padding: 20px; }
-.pj-sheet h2 { margin: 0; font: 300 24px/1.2 Literata, Georgia, serif; letter-spacing: -.48px; }
-.pj-sheet-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #6a6b68; }
-.pj-sheet-field input, .pj-sheet-field select { width: 100%; padding: 10px 12px; border: 1.5px solid #090708; border-radius: 7px; background: #fdfdfd; color: #090708; font: 16px 'Plus Jakarta Sans', sans-serif; }
+.pj-sheet h2 { margin: 0; font: var(--pj-font-display); letter-spacing: var(--pj-display-tracking); }
+.pj-sheet-field { display: flex; flex-direction: column; gap: 6px; font-size: var(--pj-text-small); color: var(--pj-grey); }
+.pj-sheet-field input, .pj-sheet-field select { width: 100%; padding: 10px 12px; border: 1.5px solid #090708; border-radius: 7px; background: #fdfdfd; color: #090708; font: var(--pj-text-chip) 'Plus Jakarta Sans', sans-serif; } /* 16px also stops iOS zooming into the field */
 .pj-sheet-pair { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
-.pj-sheet-hint, .pj-sheet-preview { margin: 0; font-size: 13px; color: #6a6b68; }
-.pj-sheet-preview { color: #090708; font-weight: 500; }
+.pj-sheet-hint, .pj-sheet-preview { margin: 0; font-size: var(--pj-text-body); line-height: var(--pj-leading); color: var(--pj-grey); }
+.pj-sheet-preview { color: var(--pj-ink); font-weight: var(--pj-weight-medium); }
 .pj-sheet-locks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .pj-sheet-lock { position: relative; }
 .pj-sheet-lock input { position: absolute; opacity: 0; }
-.pj-sheet-lock span { display: block; padding: 8px; border: 1.5px solid #090708; border-radius: 5px; background: #efedee; text-align: center; font-size: 15px; box-shadow: -2px 3px 0 #090708; cursor: pointer; transition: translate 150ms ease, box-shadow 150ms ease, background-color 150ms ease; }
-.pj-sheet-lock input:checked + span { translate: -2px 3px; box-shadow: none; background: #dcd679; font-weight: 600; }
+.pj-sheet-lock span { display: block; padding: 8px; border: 1.5px solid #090708; border-radius: 5px; background: #efedee; text-align: center; font-size: var(--pj-text-chip); box-shadow: -2px 3px 0 #090708; cursor: pointer; transition: translate 150ms ease, box-shadow 150ms ease, background-color 150ms ease; }
+.pj-sheet-lock input:checked + span { translate: -2px 3px; box-shadow: none; background: #dcd679; font-weight: var(--pj-weight-medium); }
 .pj-sheet-lock input:focus-visible + span { outline: 2px solid #0064a7; outline-offset: 3px; }
-.pj-sheet-error { min-height: 0; margin: 0; font-size: 13px; color: #c43d14; }
+.pj-sheet-error { min-height: 0; margin: 0; font-size: var(--pj-text-small); color: #c43d14; }
 .pj-sheet-error:empty { display: none; }
 .pj-sheet-actions { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
-.pj-sheet-cancel { padding: 0; border: 0; background: none; color: #6a6b68; font: 16px 'Plus Jakarta Sans', sans-serif; cursor: pointer; }
+.pj-sheet-cancel { padding: 0; border: 0; background: none; color: var(--pj-grey); font: var(--pj-text-body) 'Plus Jakarta Sans', sans-serif; cursor: pointer; }
 .pj-sheet .pj-next { cursor: pointer; }
+
+/* Title and photo open the item page. */
+.pj-home .pj-item-open { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
+.pj-item-image[data-action="open-item"] { cursor: pointer; }

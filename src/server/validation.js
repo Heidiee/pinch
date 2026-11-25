@@ -3,8 +3,10 @@
 // Request validation for items and settings. Each validator returns an error message or null.
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const ITEM_FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDuration', 'feeling'];
-const TEXT_LIMITS = { name: 200, currency: 10, goal: 100, urgency: 100, lockDuration: 100, feeling: 100 };
+const ITEM_FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDuration', 'feeling', 'store', 'notes'];
+const TEXT_LIMITS = { name: 200, currency: 10, goal: 100, urgency: 100, lockDuration: 100, feeling: 100, store: 200 };
+const MAX_NOTES = 100;
+const MAX_NOTE_LENGTH = 500;
 const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD'];
 const LOCK_DURATIONS = ['', '1 Day', '1 Week', '2 Weeks', '1 Month'];
 const CATEGORY_COLORS = ['purple', 'green', 'blue', 'coral', 'orange', 'grey'];
@@ -49,6 +51,14 @@ function validateItem(body) {
     const byteLength = encoded.length / 4 * 3 - padding;
     if (byteLength > MAX_IMAGE_BYTES) return 'image must not exceed 2 MiB';
     if (Buffer.from(encoded, 'base64').toString('base64') !== encoded) return 'image must contain valid base64';
+  }
+  if (body.notes !== undefined) {
+    if (!Array.isArray(body.notes) || body.notes.length > MAX_NOTES) return `notes must be an array of at most ${MAX_NOTES} entries`;
+    for (const note of body.notes) {
+      if (!isPlainObject(note) || Object.keys(note).some(key => key !== 'text' && key !== 'createdAt')) return 'each note must have only text and createdAt';
+      if (typeof note.text !== 'string' || !note.text.trim() || note.text.length > MAX_NOTE_LENGTH) return `note text must be 1 to ${MAX_NOTE_LENGTH} characters`;
+      if (typeof note.createdAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(note.createdAt) || !Number.isFinite(Date.parse(note.createdAt))) return 'note createdAt must be an ISO date';
+    }
   }
   return null;
 }

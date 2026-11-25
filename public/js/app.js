@@ -30,22 +30,48 @@
     }
 
     function showHome() {
-        window.mountHome(root, { onAdd: showAdd, onSettings: showSettings, onUpdate: updateItem, onDelete: deleteItem, loadItems, settings });
+        window.mountHome(root, { onAdd: showAdd, onSettings: showSettings, onOpen: showItem, onUpdate: updateItem, onDelete: deleteItem, loadItems, settings });
     }
 
-    async function updateItem(id, patch) {
-        await api(`/api/items/${encodeURIComponent(id)}`, {
+    async function patchItem(id, patch) {
+        return (await api(`/api/items/${encodeURIComponent(id)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(patch)
-        });
+        })).item;
+    }
+
+    // From the home cards: save, then refresh the list.
+    async function updateItem(id, patch) {
+        await patchItem(id, patch);
         showHome();
     }
 
     async function deleteItem(id) {
+        await removeItem(id);
+        showHome();
+    }
+
+    async function removeItem(id) {
         const response = await fetch(`/api/items/${encodeURIComponent(id)}`, { method: 'DELETE' });
         if (!response.ok && response.status !== 404) throw new Error('Could not delete this item.');
-        showHome();
+    }
+
+    // Item bottom sheet: opens over the wishlist and refreshes it on close if anything changed.
+    async function showItem(id) {
+        let items;
+        try {
+            items = await loadItems();
+        } catch {
+            window.alert('Could not open this item. Check your connection and try again.');
+            return;
+        }
+        window.openItemSheet({
+            itemId: id, items, settings,
+            onUpdate: patchItem,
+            onDelete: removeItem,
+            onClose: changed => { if (changed) showHome(); }
+        });
     }
 
     async function saveItem(item) {

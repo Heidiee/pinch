@@ -102,7 +102,7 @@
     render();
   };
 
-  window.mountHome = function mountHome(root, { onAdd = () => {}, onSettings = () => {}, onUpdate = async () => {}, onDelete = async () => {}, loadItems, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
+  window.mountHome = function mountHome(root, { onAdd = () => {}, onSettings = () => {}, onOpen = () => {}, onUpdate = async () => {}, onDelete = async () => {}, loadItems, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
     root.onclick = null;
     root.oninput = null;
     root.onchange = null;
@@ -110,15 +110,15 @@
     const loadingScreen = root.firstElementChild;
     Promise.resolve().then(loadItems).then(items => {
       if (root.firstElementChild !== loadingScreen) return;
-      renderHome(root, { onAdd, onSettings, onUpdate, onDelete, settings }, items);
+      renderHome(root, { onAdd, onSettings, onOpen, onUpdate, onDelete, settings }, items);
     }).catch(() => {
       if (root.firstElementChild !== loadingScreen) return;
       root.innerHTML = '<section class="pj-home"><div class="pj-home-inner"><h1>Your Wishlist</h1><p role="alert">Could not load your wishlist. Check your connection and try again.</p><button type="button" class="pj-next" data-action="retry">Retry</button></div></section>';
-      root.onclick = event => { if (event.target.closest('[data-action="retry"]')) window.mountHome(root, { onAdd, onSettings, onUpdate, onDelete, loadItems, settings }); };
+      root.onclick = event => { if (event.target.closest('[data-action="retry"]')) window.mountHome(root, { onAdd, onSettings, onOpen, onUpdate, onDelete, loadItems, settings }); };
     });
   };
 
-  function renderHome(root, { onAdd, onSettings, onUpdate, onDelete, settings }, items) {
+  function renderHome(root, { onAdd, onSettings, onOpen, onUpdate, onDelete, settings }, items) {
     const item = items[items.length - 1];
     const cards = items.map(entry => window.pinchItemCard(entry, settings)).join('');
     const categories = [['All','grey'], ...settings.categories.map(({ name, color }) => [name, color])];
@@ -136,7 +136,7 @@
     const filters = new Set(); // empty = All
     const search = root.querySelector('.pj-search input');
     const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (!filters.size || filters.has(card.dataset.category)) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
-    const itemActions = window.pinchItemActions(root, { items, settings, onUpdate, onDelete });
+    const itemActions = window.pinchItemActions(root, { items, settings, onUpdate, onDelete, onOpen });
     root.onclick = (event) => {
       if (itemActions(event)) return;
       const button = event.target.closest('[data-action]');

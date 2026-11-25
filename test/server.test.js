@@ -67,12 +67,12 @@ test('creates and retrieves UI-shaped items with consistent response schemas', a
   const response = await post(input);
   assert.equal(response.status, 201);
   const { item } = await response.json();
-  assert.deepEqual(item, { ...input, name: 'Notebook', id: '1' });
+  assert.deepEqual(item, { ...input, name: 'Notebook', id: '1', store: '', notes: [] });
   const list = await fetch(`${base}/api/items`);
   assert.equal(list.status, 200);
   assert.deepEqual(await list.json(), { items: [item] });
   const minimal = await post({ name: 'Pen', price: 0 });
-  assert.deepEqual(await minimal.json(), { item: { id: '2', name: 'Pen', price: 0, currency: 'CAD', image: null, goal: '', urgency: '', lockDuration: '', feeling: '' } });
+  assert.deepEqual(await minimal.json(), { item: { id: '2', name: 'Pen', price: 0, currency: 'CAD', image: null, goal: '', urgency: '', lockDuration: '', feeling: '', store: '', notes: [] } });
 });
 
 test('exposes MongoDB creation timestamps for calendar scheduling', async () => {
@@ -195,7 +195,7 @@ test('updates an item with a partial patch and rejects bad updates', async () =>
   const patch = body => fetch(`${base}/api/items/a1`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   let response = await patch({ name: ' Desk lamp ', lockDuration: '2 Weeks' });
   assert.equal(response.status, 200);
-  assert.deepEqual((await response.json()).item, { id: 'a1', name: 'Desk lamp', price: '40', currency: 'CAD', image: null, goal: 'Essentials', urgency: '', lockDuration: '2 Weeks', feeling: 'Happy' });
+  assert.deepEqual((await response.json()).item, { id: 'a1', name: 'Desk lamp', price: '40', currency: 'CAD', image: null, goal: 'Essentials', urgency: '', lockDuration: '2 Weeks', feeling: 'Happy', store: '', notes: [] });
   for (const body of [{}, { name: '  ' }, { price: -5 }, { extra: 1 }, { goal: 7 }]) {
     response = await patch(body);
     assert.equal(response.status, 400, JSON.stringify(body));
@@ -214,5 +214,23 @@ test('deletes an item and returns 404 for unknown ids', async () => {
   response = await fetch(`${base}/api/items/d1`, { method: 'DELETE' });
   assert.equal(response.status, 404);
   assert.deepEqual(await response.json(), { error: 'Item not found' });
+  documents = [];
+});
+
+test('stores a shop and notes on an item, and validates them', async () => {
+  documents = [{ _id: 'n1', name: 'Tablet' }];
+  const patch = body => fetch(`${base}/api/items/n1`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const notes = [{ text: ' Graduation gift ', createdAt: '2026-10-10T12:00:00.000Z' }];
+  let response = await patch({ store: ' apple.com ', notes });
+  assert.equal(response.status, 200);
+  const { item } = await response.json();
+  assert.equal(item.store, 'apple.com');
+  assert.deepEqual(item.notes, [{ text: 'Graduation gift', createdAt: '2026-10-10T12:00:00.000Z' }]);
+  for (const body of [{ store: 5 }, { store: 'x'.repeat(201) }, { notes: 'hi' }, { notes: [{ text: '' , createdAt: '2026-10-10T12:00:00.000Z' }] },
+    { notes: [{ text: 'a', createdAt: 'yesterday' }] }, { notes: [{ text: 'a', createdAt: '2026-10-10T12:00:00.000Z', extra: 1 }] },
+    { notes: [{ text: 'x'.repeat(501), createdAt: '2026-10-10T12:00:00.000Z' }] }]) {
+    response = await patch(body);
+    assert.equal(response.status, 400, JSON.stringify(body));
+  }
   documents = [];
 });

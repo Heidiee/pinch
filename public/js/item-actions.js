@@ -13,7 +13,9 @@
     del: 'M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z',
     close: 'm256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z',
     check: 'M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z',
-    chevron: 'M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z'
+    chevron: 'M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z',
+    back: 'M400-80 0-480l400-400 71 71-329 329 329 329-71 71Z',
+    forward: 'm321-80-71-71 329-329-329-329 71-71 400 400L321-80Z'
   };
   const icon = (name, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 -960 960 960" aria-hidden="true"><path fill="currentColor" d="${PATHS[name]}"/></svg>`;
 
@@ -52,21 +54,90 @@
   const fabOpen = (name) => `<button type="button" class="pj-fab-btn" data-action="item-edit" aria-label="Edit ${esc(name)}">${icon('edit')}</button><button type="button" class="pj-fab-btn" data-action="item-lock" aria-label="Change unlock date">${icon('calendar')}</button><button type="button" class="pj-fab-btn is-danger" data-action="item-delete" aria-label="Delete ${esc(name)}">${icon('del')}</button><span class="pj-fab-divider" aria-hidden="true"></span><button type="button" class="pj-fab-btn" data-action="fab-close" aria-label="Close actions">${icon('close')}</button>`;
   const fabConfirm = (name) => `<span class="pj-fab-question" id="pj-confirm-text">Delete this item?</span><button type="button" class="pj-fab-btn" data-action="fab-close" aria-label="Keep ${esc(name)}">${icon('close')}</button><button type="button" class="pj-fab-btn is-danger" data-action="item-delete-confirm" aria-label="Yes, delete ${esc(name)}">${icon('check')}</button>`;
 
+  // Edit pop-ups, shared by the wishlist card and the item page.
+  function sheet(title, body, onSubmit) {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'pj-sheet';
+    dialog.innerHTML = `<form method="dialog" class="pj-sheet-form"><h2>${esc(title)}</h2>${body}<p class="pj-sheet-error" role="alert"></p><div class="pj-sheet-actions"><button type="button" class="pj-sheet-cancel" value="cancel">Cancel</button><button type="submit" class="pj-next">Save</button></div></form>`;
+    document.body.appendChild(dialog);
+    const form = dialog.querySelector('form');
+    const error = dialog.querySelector('.pj-sheet-error');
+    dialog.querySelector('.pj-sheet-cancel').onclick = () => dialog.close();
+    dialog.addEventListener('close', () => dialog.remove());
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      const save = form.querySelector('[type="submit"]');
+      save.disabled = true;
+      error.textContent = '';
+      try {
+        await onSubmit(new FormData(form), form);
+        dialog.close();
+      } catch (err) {
+        error.textContent = err && err.message ? err.message : 'Could not save. Check your connection and try again.';
+        save.disabled = false;
+      }
+    };
+    dialog.showModal();
+    return dialog;
+  }
+
+  function editSheet(item, settings, onUpdate) {
+    const categories = settings.categories.map((c) => c.name);
+    if (item.goal && !categories.includes(item.goal)) categories.push(item.goal);
+    const body = `<label class="pj-sheet-field"><span>Name</span><input name="name" maxlength="200" required value="${esc(item.name)}" autocomplete="off"></label>
+      <div class="pj-sheet-pair"><label class="pj-sheet-field"><span>Price</span><input name="price" type="number" min="0" step="any" inputmode="decimal" value="${esc(item.price)}"></label>
+      <label class="pj-sheet-field pj-sheet-currency"><span>Currency</span><select name="currency">${CURRENCIES.map((c) => `<option${c === item.currency ? ' selected' : ''}>${c}</option>`).join('')}</select></label></div>
+      <label class="pj-sheet-field"><span>Store</span><input name="store" maxlength="200" placeholder="e.g. apple.com" value="${esc(item.store)}" autocomplete="off"></label>
+      <label class="pj-sheet-field"><span>Category</span><select name="goal"><option value="">None</option>${categories.map((c) => `<option${c === item.goal ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>`;
+    sheet('Edit item', body, async (data) => {
+      const name = String(data.get('name')).trim();
+      if (!name) throw new Error('Please enter an item name.');
+      await onUpdate(item.id, { name, price: String(data.get('price')), currency: String(data.get('currency')), goal: String(data.get('goal')), store: String(data.get('store')) });
+    });
+  }
+
+  function lockSheet(item, onUpdate) {
+    const custom = item.lockDuration && !LOCKS.includes(item.lockDuration) ? item.lockDuration : '';
+    const body = `<p class="pj-sheet-hint">Your unlock date counts from the day you added this item.</p>
+      <div class="pj-sheet-locks" role="radiogroup" aria-label="Lock length">${LOCKS.map((lock) => `<label class="pj-sheet-lock"><input type="radio" name="lock" value="${lock}"${item.lockDuration === lock ? ' checked' : ''}><span>${lock}</span></label>`).join('')}</div>
+      <label class="pj-sheet-field"><span>Or a custom length</span><input name="custom" placeholder="e.g. 3 weeks" value="${esc(custom)}" autocomplete="off"></label>
+      <p class="pj-sheet-preview" aria-live="polite"></p>`;
+    const dialog = sheet('Change unlock date', body, async (data) => {
+      const lockDuration = String(data.get('custom') || '').trim() || String(data.get('lock') || '');
+      if (lockDuration && !/^\d+\s*(day|week|month)s?$/i.test(lockDuration)) throw new Error('Use a length like “3 days”, “2 weeks” or “1 month”.');
+      await onUpdate(item.id, { lockDuration });
+    });
+    const form = dialog.querySelector('form');
+    const preview = dialog.querySelector('.pj-sheet-preview');
+    const update = (event) => {
+      if (event && event.target.name === 'lock') form.elements.custom.value = '';
+      if (event && event.target.name === 'custom' && event.target.value) form.querySelectorAll('[name="lock"]').forEach((radio) => { radio.checked = false; });
+      const lockDuration = form.elements.custom.value.trim() || (form.querySelector('[name="lock"]:checked') || {}).value || '';
+      preview.textContent = lockDuration ? unlockText({ ...item, lockDuration }) : 'No lock set';
+    };
+    form.addEventListener('input', update);
+    update();
+  }
+
+  window.pinchItemSheets = { edit: editSheet, lock: lockSheet };
+  window.pinchItemFormat = { esc, icon, money, unlockText, mood: (item) => MOODS[String(item.feeling || '').toLowerCase()] || 'neutral' };
+
   window.pinchItemCard = function pinchItemCard(item, settings) {
     const name = item.name || item.title || '';
     const category = item.goal || item.category || '';
     const mood = MOODS[String(item.feeling || '').toLowerCase()] || 'neutral';
     const image = typeof item.image === 'string' ? item.image : '';
     return `<article class="pj-card pj-item" data-id="${esc(item.id)}" data-category="${esc(category.toLowerCase())}" data-name="${esc(String(name).toLowerCase())}">
-      <div class="pj-item-head"><img class="pj-item-mood" src="./assets/journey/${mood}.svg" alt="${esc(item.feeling ? `Feeling ${item.feeling.toLowerCase()}` : '')}"><h2>${esc(name)}</h2></div>
-      <div class="pj-item-image">${image ? `<img src="${esc(image)}" alt="${esc(name)}">` : ''}<div class="pj-fab" data-state="closed">${fabClosed(name)}</div></div>
+      <div class="pj-item-head"><img class="pj-item-mood" src="./assets/journey/${mood}.svg" alt="${esc(item.feeling ? `Feeling ${item.feeling.toLowerCase()}` : '')}"><h2><button type="button" class="pj-item-open" data-action="open-item">${esc(name)}</button></h2></div>
+      <div class="pj-item-image" data-action="open-item">${image ? `<img src="${esc(image)}" alt="">` : ''}<div class="pj-fab" data-state="closed">${fabClosed(name)}</div></div>
       <div class="pj-item-info"><p class="pj-unlock">${esc(unlockText(item))}</p>${costBlock(item, settings)}</div>
     </article>`;
   };
 
   // Wires the action button, cost breakdown and edit sheets for the cards inside `root`.
   // Returns a click handler; it returns true when it handled the click.
-  window.pinchItemActions = function pinchItemActions(root, { items, settings, onUpdate, onDelete }) {
+  window.pinchItemActions = function pinchItemActions(root, { items, settings, onUpdate, onDelete, onOpen }) {
     const byId = new Map(items.map((item) => [String(item.id), item]));
 
     function setFab(fab, state) {
@@ -82,70 +153,6 @@
       root.querySelectorAll('.pj-fab:not([data-state="closed"])').forEach((fab) => { if (fab !== except) setFab(fab, 'closed'); });
     }
 
-    function sheet(title, body, onSubmit) {
-      const dialog = document.createElement('dialog');
-      dialog.className = 'pj-sheet';
-      dialog.innerHTML = `<form method="dialog" class="pj-sheet-form"><h2>${esc(title)}</h2>${body}<p class="pj-sheet-error" role="alert"></p><div class="pj-sheet-actions"><button type="button" class="pj-sheet-cancel" value="cancel">Cancel</button><button type="submit" class="pj-next">Save</button></div></form>`;
-      document.body.appendChild(dialog);
-      const form = dialog.querySelector('form');
-      const error = dialog.querySelector('.pj-sheet-error');
-      dialog.querySelector('.pj-sheet-cancel').onclick = () => dialog.close();
-      dialog.addEventListener('close', () => dialog.remove());
-      dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
-      form.onsubmit = async (event) => {
-        event.preventDefault();
-        const save = form.querySelector('[type="submit"]');
-        save.disabled = true;
-        error.textContent = '';
-        try {
-          await onSubmit(new FormData(form), form);
-          dialog.close();
-        } catch (err) {
-          error.textContent = err && err.message ? err.message : 'Could not save. Check your connection and try again.';
-          save.disabled = false;
-        }
-      };
-      dialog.showModal();
-      return dialog;
-    }
-
-    function editSheet(item) {
-      const categories = settings.categories.map((c) => c.name);
-      if (item.goal && !categories.includes(item.goal)) categories.push(item.goal);
-      const body = `<label class="pj-sheet-field"><span>Name</span><input name="name" maxlength="200" required value="${esc(item.name)}" autocomplete="off"></label>
-        <div class="pj-sheet-pair"><label class="pj-sheet-field"><span>Price</span><input name="price" type="number" min="0" step="any" inputmode="decimal" value="${esc(item.price)}"></label>
-        <label class="pj-sheet-field pj-sheet-currency"><span>Currency</span><select name="currency">${CURRENCIES.map((c) => `<option${c === item.currency ? ' selected' : ''}>${c}</option>`).join('')}</select></label></div>
-        <label class="pj-sheet-field"><span>Category</span><select name="goal"><option value="">None</option>${categories.map((c) => `<option${c === item.goal ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>`;
-      sheet('Edit item', body, async (data) => {
-        const name = String(data.get('name')).trim();
-        if (!name) throw new Error('Please enter an item name.');
-        await onUpdate(item.id, { name, price: String(data.get('price')), currency: String(data.get('currency')), goal: String(data.get('goal')) });
-      });
-    }
-
-    function lockSheet(item) {
-      const custom = item.lockDuration && !LOCKS.includes(item.lockDuration) ? item.lockDuration : '';
-      const body = `<p class="pj-sheet-hint">Your unlock date counts from the day you added this item.</p>
-        <div class="pj-sheet-locks" role="radiogroup" aria-label="Lock length">${LOCKS.map((lock) => `<label class="pj-sheet-lock"><input type="radio" name="lock" value="${lock}"${item.lockDuration === lock ? ' checked' : ''}><span>${lock}</span></label>`).join('')}</div>
-        <label class="pj-sheet-field"><span>Or a custom length</span><input name="custom" placeholder="e.g. 3 weeks" value="${esc(custom)}" autocomplete="off"></label>
-        <p class="pj-sheet-preview" aria-live="polite"></p>`;
-      const dialog = sheet('Change unlock date', body, async (data) => {
-        const lockDuration = String(data.get('custom') || '').trim() || String(data.get('lock') || '');
-        if (lockDuration && !/^\d+\s*(day|week|month)s?$/i.test(lockDuration)) throw new Error('Use a length like “3 days”, “2 weeks” or “1 month”.');
-        await onUpdate(item.id, { lockDuration });
-      });
-      const form = dialog.querySelector('form');
-      const preview = dialog.querySelector('.pj-sheet-preview');
-      const update = (event) => {
-        if (event && event.target.name === 'lock') form.elements.custom.value = '';
-        if (event && event.target.name === 'custom' && event.target.value) form.querySelectorAll('[name="lock"]').forEach((radio) => { radio.checked = false; });
-        const lockDuration = form.elements.custom.value.trim() || (form.querySelector('[name="lock"]:checked') || {}).value || '';
-        preview.textContent = lockDuration ? unlockText({ ...item, lockDuration }) : 'No lock set';
-      };
-      form.addEventListener('input', update);
-      update();
-    }
-
     document.addEventListener('keydown', function onKey(event) {
       if (!root.isConnected || !root.querySelector('.pj-item')) { document.removeEventListener('keydown', onKey); return; }
       if (event.key === 'Escape' && !document.querySelector('dialog.pj-sheet[open]')) {
@@ -155,17 +162,19 @@
     });
 
     return function handleClick(event) {
-      const button = event.target.closest('button');
-      const fab = button && button.closest('.pj-fab');
-      if (!fab) { closeAll(); }
+      const fab = event.target.closest('.pj-fab');
+      if (!fab) closeAll();
+      // The photo opens the item too, unless the tap was on the action button.
+      const button = event.target.closest('button') || (!fab && event.target.closest('.pj-item-image[data-action="open-item"]'));
       if (!button) return false;
       const card = button.closest('.pj-item');
       const item = card && byId.get(card.dataset.id);
       switch (button.dataset.action) {
+        case 'open-item': if (item && onOpen) onOpen(item.id); return true;
         case 'fab-open': closeAll(fab); setFab(fab, 'open'); return true;
         case 'fab-close': setFab(fab, 'closed'); return true;
-        case 'item-edit': setFab(fab, 'closed'); if (item) editSheet(item); return true;
-        case 'item-lock': setFab(fab, 'closed'); if (item) lockSheet(item); return true;
+        case 'item-edit': setFab(fab, 'closed'); if (item) editSheet(item, settings, onUpdate); return true;
+        case 'item-lock': setFab(fab, 'closed'); if (item) lockSheet(item, onUpdate); return true;
         case 'item-delete': setFab(fab, 'confirm'); return true;
         case 'item-delete-confirm': {
           button.disabled = true;

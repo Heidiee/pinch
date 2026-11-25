@@ -10,6 +10,9 @@ const itemId = id => (/^[a-f0-9]{24}$/i.test(id) ? new ObjectId(id) : id);
 function serializeItem(item) {
   const result = { id: String(item._id) };
   for (const field of ITEM_FIELDS) result[field] = item[field];
+  // Items saved before these fields existed get empty defaults.
+  result.store = item.store ?? '';
+  result.notes = Array.isArray(item.notes) ? item.notes : [];
   const createdAt = item.createdAt instanceof Date ? item.createdAt : item._id?.getTimestamp?.();
   if (createdAt instanceof Date && Number.isFinite(createdAt.getTime())) result.createdAt = createdAt.toISOString();
   return result;
@@ -31,7 +34,8 @@ function itemsRouter(collection) {
     const item = {
       name: req.body.name.trim(), price: req.body.price ?? '', currency: req.body.currency ?? 'CAD',
       image: req.body.image ?? null, goal: req.body.goal ?? '', urgency: req.body.urgency ?? '',
-      lockDuration: req.body.lockDuration ?? '', feeling: req.body.feeling ?? ''
+      lockDuration: req.body.lockDuration ?? '', feeling: req.body.feeling ?? '',
+      store: req.body.store ?? '', notes: req.body.notes ?? []
     };
     try {
       const result = await collection.insertOne(item);
@@ -44,6 +48,8 @@ function itemsRouter(collection) {
     if (error) return res.status(400).json({ error });
     const update = { ...req.body };
     if (typeof update.name === 'string') update.name = update.name.trim();
+    if (typeof update.store === 'string') update.store = update.store.trim();
+    if (Array.isArray(update.notes)) update.notes = update.notes.map(({ text, createdAt }) => ({ text: text.trim(), createdAt }));
     try {
       const item = await collection.findOneAndUpdate({ _id: itemId(req.params.id) }, { $set: update }, { returnDocument: 'after' });
       if (!item) return res.status(404).json({ error: 'Item not found' });

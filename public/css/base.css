@@ -1,4 +1,18 @@
 /* Page-wide defaults and the loading splash. */
+
+/* Type scale taken from the home page; other screens should use these instead of their own sizes. */
+:root {
+    --pj-font-display: 300 24px/1.2 Literata, Georgia, serif;  /* page and card titles */
+    --pj-display-tracking: -.48px;
+    --pj-text-chip: 16px;     /* filter and category tags */
+    --pj-text-body: 14px;     /* body text, rows, buttons */
+    --pj-text-small: 12px;    /* labels, hints, secondary links */
+    --pj-leading: 1.2;
+    --pj-weight-regular: 400;
+    --pj-weight-medium: 500;  /* emphasis, e.g. the true cost row */
+    --pj-ink: #090708;
+    --pj-grey: #6a6b68;
+}
 * { box-sizing: border-box; }
 html, body { width: 100%; min-height: 100%; margin: 0; }
 body { min-height: 100vh; background: #efedee; color: #090708; }
