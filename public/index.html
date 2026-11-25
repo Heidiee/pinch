@@ -16,7 +16,9 @@
     <link rel="stylesheet" href="./css/item-actions.css">
     <link rel="stylesheet" href="./css/item-detail.css">
     <link rel="stylesheet" href="./css/button-states.css">
+    <link rel="stylesheet" href="./css/device.css">
     <!-- Screens register themselves on window; app.js loads last and wires them together. -->
+    <script defer src="./js/device.js"></script>
     <script defer src="./js/onboarding.js"></script>
     <script defer src="./js/journey.js"></script>
     <script defer src="./js/add-flow.js"></script>
@@ -27,11 +29,16 @@
     <script defer src="./js/app.js"></script>
 </head>
 <body>
-    <main id="app">
-        <div class="splash" aria-label="Pinch is loading">
-            <img src="./assets/pinch-logo.svg" alt="">
-            <h1>Pinch</h1>
+    <!-- On desktop-sized windows, device.css draws this as an iPhone; on phones it is a plain wrapper. -->
+    <div class="device">
+        <div class="device-screen">
+            <main id="app">
+                <div class="splash" aria-label="Pinch is loading">
+                    <img src="./assets/pinch-logo.svg" alt="">
+                    <h1>Pinch</h1>
+                </div>
+            </main>
         </div>
-    </main>
+    </div>
 </body>
 </html>

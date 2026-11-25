@@ -1,5 +1,5 @@
 .af-screen, .af-screen * { box-sizing: border-box; }
-.af-screen { position: relative; margin: 0 auto; width: 100%; max-width: 402px; min-height: max(874px, 100vh); background: #efedee; color: #090708; font-family: 'Plus Jakarta Sans', sans-serif; }
+.af-screen { position: relative; margin: 0 auto; width: 100%; max-width: 402px; min-height: max(874px, var(--app-h, 100vh)); background: #efedee; color: #090708; font-family: 'Plus Jakarta Sans', sans-serif; }
 .af-screen button, .af-screen input, .af-screen select { font: inherit; color: inherit; }
 .af-screen button { cursor: pointer; }
 .af-brand { position: absolute; top: 67px; left: 20px; display: flex; gap: 5.714px; align-items: center; font: 400 22.857px/1 'Aleo', Georgia, serif; letter-spacing: -.2286px; }

@@ -32,6 +32,7 @@ public/                 Everything the browser loads
     item-actions.js     Wishlist card and its edit / unlock date / delete actions
     item-detail.js      Item bottom sheet: details, price and notes tabs; let it go or keep it
     calendar.js         Home calendar: week / month views, paging, day agenda
+    device.js           Desktop preview: fits the iPhone frame (css/device.css) to the window
   assets/               SVG icons and illustrations
 src/server/             Node.js backend
   index.js              Entry point: connects to MongoDB and starts listening

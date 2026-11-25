@@ -197,7 +197,8 @@
           strip.classList.add('is-dragging'); // no snapping while the mouse holds it
           try { strip.setPointerCapture(drag.id); } catch { /* still works without capture */ }
         }
-        strip.scrollLeft = drag.left - dx;
+        // Divide by the desktop phone frame's scale so the dates follow the pointer.
+        strip.scrollLeft = drag.left - dx / (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--device-scale')) || 1);
       });
       const endDrag = () => {
         if (!drag) return;

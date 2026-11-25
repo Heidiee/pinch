@@ -1,6 +1,17 @@
 (() => {
     const root = document.getElementById('app');
     let settings = window.PINCH_DEFAULT_SETTINGS;
+    let screen = 'splash';
+
+    // Start each new screen at the top. The page scrolls on phones; inside the desktop phone frame the
+    // app element scrolls instead, so reset both. Refreshing the same screen keeps its position.
+    function enter(next) {
+        if (next !== screen) {
+            root.scrollTop = 0;
+            window.scrollTo(0, 0);
+        }
+        screen = next;
+    }
 
     async function api(path, options) {
         const response = await fetch(path, options);
@@ -30,6 +41,7 @@
     }
 
     function showHome() {
+        enter('home');
         window.mountHome(root, { onAdd: showAdd, onSettings: showSettings, onOpen: showItem, onUpdate: updateItem, onDelete: deleteItem, loadItems, settings });
     }
 
@@ -84,14 +96,17 @@
     }
 
     function showAdd() {
+        enter('add');
         window.mountAddFlow(root, { onHome: showHome, onComplete: saveItem, onSettings: showSettings, settings });
     }
 
     function showSettings() {
+        enter('settings');
         window.mountSettings(root, { settings, loadItems, saveSettings, onHome: showHome, onAdd: showAdd });
     }
 
     function startJourney() {
+        enter('journey');
         window.mountJourney(root, { onComplete: saveItem, onHome: showHome, onSettings: showSettings, settings });
     }
 

@@ -1,0 +1,141 @@
+/* Desktop preview: show the app inside an iPhone 18 Pro so it reads as a clean prototype.
+   Apple's specs: 6.3" screen, 2622 × 1206 px at 460 ppi (3× scale) = 402 × 874 pt, the Figma frame size;
+   body 150.0 × 71.9 mm ≈ 905 × 434 pt at that density. If the window is too short, js/device.js shrinks
+   the whole phone evenly (--device-scale) so it keeps those proportions; at full size nothing is scaled.
+   On phone-sized screens none of this applies and the app fills the screen as before. */
+@media (min-width: 700px) and (min-height: 480px) {
+  :root {
+    --device-w: 402px;
+    --app-h: 874px;
+    --band: 3px;                 /* aluminium edge */
+    --bezel-x: 13px;             /* black glass border: 16 pt from the edge, minus the band */
+    --bezel-y: 12.5px;           /* 15.5 pt from the edge, minus the band */
+    --screen-radius: 62px;
+    --glass-radius: calc(var(--screen-radius) + var(--bezel-x));
+    --device-radius: calc(var(--glass-radius) + var(--band));
+    --metal: #c9c8c4;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    background: #1b1c2d; /* solid dark backdrop so the phone stands out */
+  }
+
+  /* Outer aluminium band with a soft highlight, plus the shadow the phone casts. */
+  .device {
+    position: relative;
+    zoom: var(--device-scale, 1);
+    padding: var(--band);
+    border-radius: var(--device-radius);
+    background: linear-gradient(160deg, #f1f0ec 0%, var(--metal) 22%, #a9a8a4 50%, var(--metal) 78%, #ecebe7 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, .55),
+      inset 0 0 0 2px rgba(0, 0, 0, .12),
+      0 2px 3px rgba(9, 7, 8, .18),
+      0 24px 48px -8px rgba(9, 7, 8, .28),
+      0 60px 90px -30px rgba(9, 7, 8, .25);
+  }
+
+  /* Side buttons, drawn as slim metal tabs just outside the band.
+     Left: Action button, then volume up and down. Right: side button, then Camera Control lower down. */
+  .device::before,
+  .device::after {
+    content: "";
+    position: absolute;
+    width: 3px;
+    border-radius: 2px;
+    background: linear-gradient(to right, #9b9a96, #d8d7d3);
+  }
+  .device::before {
+    left: -3px;
+    top: 150px;
+    height: 160px;
+    border-radius: 2px 0 0 2px;
+    background:
+      linear-gradient(to bottom, #b4b3af 0 30px, transparent 30px 52px, #b4b3af 52px 102px, transparent 102px 112px, #b4b3af 112px 160px);
+  }
+  .device::after {
+    right: -3px;
+    top: 215px;
+    height: 210px;
+    border-radius: 0 2px 2px 0;
+    background:
+      linear-gradient(to bottom, #b4b3af 0 72px, transparent 72px 170px, #8f8e8a 170px 210px);
+  }
+
+  /* Black glass around the display. The transform makes fixed elements (nav bars) sit on the phone. */
+  .device-screen {
+    position: relative;
+    padding: var(--bezel-y) var(--bezel-x);
+    border-radius: var(--glass-radius);
+    background: #050506;
+    box-shadow: inset 0 0 0 1px #1f1f22, inset 0 0 6px rgba(255, 255, 255, .06);
+    transform: translateZ(0);
+  }
+  .device-screen > #app {
+    width: var(--device-w);
+    height: var(--app-h);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-radius: var(--screen-radius);
+    background: #efedee;
+    scrollbar-width: none;
+  }
+  .device-screen > #app::-webkit-scrollbar { display: none; }
+
+  /* Dynamic Island and home indicator, drawn over the screen like on the real phone. */
+  .device-screen::before {
+    content: "";
+    position: absolute;
+    z-index: 5;
+    top: calc(var(--bezel-y) + 11px);
+    left: 50%;
+    width: 124px;
+    height: 36px;
+    border-radius: 18px;
+    background: #000;
+    translate: -50% 0;
+    pointer-events: none;
+  }
+  .device-screen::after {
+    content: "";
+    position: absolute;
+    z-index: 5;
+    bottom: calc(var(--bezel-y) + 8px);
+    left: 50%;
+    width: 134px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(9, 7, 8, .8);
+    translate: -50% 0;
+    pointer-events: none;
+  }
+
+  /* Floating nav bars measure from the glass edge, so add the bezel to keep them 36px above the screen's bottom. */
+  .pj-tabbar, .af-nav { bottom: calc(36px + var(--bezel-y)); }
+
+  /* While the item sheet is open, the phone screen behind it stays still. */
+  html.pd-locked .device-screen > #app { overflow: hidden; }
+
+  /* Pop-ups and the item sheet live above the page, so scale them with the phone and place them on its
+     screen (positions come from js/device.js). Their dimmed background stays inside the screen. */
+  .pd-sheet {
+    zoom: var(--device-scale, 1);
+    width: var(--device-w);
+    max-height: calc(var(--app-h) - 72px);
+    margin: 0;
+    inset: auto auto calc(var(--screen-bottom, 0px) / var(--device-scale, 1)) calc(var(--screen-left, 0px) / var(--device-scale, 1));
+    border-radius: 16px 16px var(--screen-radius) var(--screen-radius);
+  }
+  .pj-sheet {
+    zoom: var(--device-scale, 1);
+    width: min(var(--device-w) - 32px, 362px);
+  }
+  .pd-sheet::backdrop,
+  .pj-sheet::backdrop {
+    clip-path: inset(var(--screen-top, 0px) var(--screen-right, 0px) var(--screen-bottom, 0px) var(--screen-left, 0px) round var(--screen-r, 0px));
+  }
+}

@@ -6,7 +6,7 @@ html.pd-locked, html.pd-locked body { overflow: hidden; }
 .pd-sheet {
   width: min(100%, 402px);
   max-width: 402px;
-  max-height: calc(100dvh - 72px);
+  max-height: calc(var(--app-h, 100dvh) - 72px);
   margin: auto auto 0;
   padding: 0 16px calc(20px + env(safe-area-inset-bottom));
   overflow-y: auto;

@@ -214,7 +214,8 @@
     });
     bar.addEventListener('pointermove', (event) => {
       if (!drag) return;
-      drag.dy = Math.max(0, event.clientY - drag.y);
+      // Pointer moves are in window pixels; divide by the desktop phone frame's scale so the sheet follows the finger.
+      drag.dy = Math.max(0, (event.clientY - drag.y) / (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--device-scale')) || 1));
       if (drag.dy > 4) drag.moved = true;
       sheet.classList.add('is-dragging');
       sheet.style.translate = `0 ${drag.dy}px`;
