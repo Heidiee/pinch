@@ -225,6 +225,9 @@
       const yearEl = card.querySelector('.pj-cal-year');
       if (monthEl.textContent !== month) monthEl.textContent = month;
       if (yearEl.textContent !== String(date.getFullYear())) yearEl.textContent = String(date.getFullYear());
+      // Only fade an edge while there are more days beyond it.
+      strip.classList.toggle('at-start', strip.scrollLeft <= 1);
+      strip.classList.toggle('at-end', strip.scrollLeft >= strip.scrollWidth - strip.clientWidth - 1);
       const todayCell = strip.querySelector('.is-today');
       const visible = todayCell && todayCell.offsetLeft + todayCell.offsetWidth > strip.scrollLeft && todayCell.offsetLeft < strip.scrollLeft + strip.clientWidth;
       card.querySelector('.pj-cal-today').hidden = Boolean(visible);

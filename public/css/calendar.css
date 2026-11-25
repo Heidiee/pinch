@@ -14,7 +14,8 @@
 .pj-home .pj-cal-today[hidden] { display: none; }
 
 /* Week strip: days scroll sideways, 40px wide with 15px between, snapping to whole days. */
-.pj-cal-strip { position: relative; display: flex; gap: 15px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -2px; padding: 2px; }
+/* The strip runs out to the card's edges (through its 15px padding) so days drift out of view there. */
+.pj-cal-strip { position: relative; display: flex; gap: 15px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 15px; scrollbar-width: none; margin: 0 -15px; padding: 2px 15px; }
 .pj-cal-strip::-webkit-scrollbar { display: none; }
 .pj-home .pj-cal-cell { display: flex; flex: none; flex-direction: column; align-items: center; gap: 5px; width: 40px; padding: 0; border: 0; background: none; scroll-snap-align: center; }
 .pj-cal-wd { color: var(--pj-grey); font-size: var(--pj-text-small); line-height: 15px; }
@@ -58,3 +59,33 @@
 .pj-cal-strip { cursor: grab; }
 .pj-cal-strip.is-dragging { cursor: grabbing; scroll-snap-type: none; }
 .pj-cal-strip.is-dragging .pj-cal-cell { cursor: grabbing; }
+
+/* Soft fade at both ends of the date strip. The ramp follows an ease curve (many stops instead of a
+   straight line) so there is no visible point where the fade begins. Each side eases away when the
+   strip reaches that end. */
+@property --fade-start { syntax: '<length>'; inherits: false; initial-value: 48px; }
+@property --fade-end { syntax: '<length>'; inherits: false; initial-value: 48px; }
+.pj-cal-strip {
+  --fade-start: 48px;
+  --fade-end: 48px;
+  --fade: linear-gradient(to right,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, .05) calc(var(--fade-start) * .15),
+    rgba(0, 0, 0, .2) calc(var(--fade-start) * .3),
+    rgba(0, 0, 0, .45) calc(var(--fade-start) * .48),
+    rgba(0, 0, 0, .7) calc(var(--fade-start) * .65),
+    rgba(0, 0, 0, .9) calc(var(--fade-start) * .82),
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    rgba(0, 0, 0, .9) calc(100% - var(--fade-end) * .82),
+    rgba(0, 0, 0, .7) calc(100% - var(--fade-end) * .65),
+    rgba(0, 0, 0, .45) calc(100% - var(--fade-end) * .48),
+    rgba(0, 0, 0, .2) calc(100% - var(--fade-end) * .3),
+    rgba(0, 0, 0, .05) calc(100% - var(--fade-end) * .15),
+    rgba(0, 0, 0, 0) 100%);
+  -webkit-mask-image: var(--fade);
+  mask-image: var(--fade);
+  transition: --fade-start 250ms ease, --fade-end 250ms ease;
+}
+.pj-cal-strip.at-start { --fade-start: 0px; }
+.pj-cal-strip.at-end { --fade-end: 0px; }
