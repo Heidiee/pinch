@@ -52,3 +52,18 @@
 /* Title and photo open the item page. */
 .pj-home .pj-item-open { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }
 .pj-item-image[data-action="open-item"] { cursor: pointer; }
+
+/* Bought: the bag button stays dark while on, and the card shows a bought line instead of the unlock date. */
+.pj-fab-btn.is-on { background: var(--pj-ink); color: #fdfdfd; }
+.pj-card .pj-bought { display: flex; align-items: center; gap: 6px; color: #535b00; font-weight: var(--pj-weight-medium); }
+.pj-bought svg { flex: none; }
+
+/* Edit pop-up: categories are toggle chips; checked ones keep their colour, unchecked ones are plain. */
+.pj-sheet-goals { margin: 0; padding: 0; border: 0; }
+.pj-sheet-goals legend { margin-bottom: 6px; padding: 0; }
+.pj-sheet-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.pj-sheet-chip { position: relative; cursor: pointer; }
+.pj-sheet-chip input { position: absolute; opacity: 0; }
+.pj-sheet-chip .pj-tag { display: inline-block; font-size: var(--pj-text-body) !important; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
+.pj-sheet-chip input:not(:checked) + .pj-tag { border-color: #d9d9d9; background: #fdfdfd; color: var(--pj-grey); box-shadow: none; }
+.pj-sheet-chip input:focus-visible + .pj-tag { outline: 2px solid #0064a7; outline-offset: 3px; }

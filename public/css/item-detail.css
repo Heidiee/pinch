@@ -85,3 +85,4 @@ html.pd-locked, html.pd-locked body { overflow: hidden; }
 .pd-letgo { border: 1.5px solid #d9d9d9; background: #fdfdfd; color: #ff7749 !important; }
 .pd-keep { border: 1.5px solid var(--pj-ink); background: var(--pj-ink); color: #fdfdfd !important; box-shadow: -2px 3px 0 var(--pj-ink); }
 .pd-confirm { border-color: #ff7749; background: #ff7749; color: #fdfdfd !important; cursor: pointer; }
+.pd-tags { display: flex; flex-wrap: wrap; gap: 8px; }

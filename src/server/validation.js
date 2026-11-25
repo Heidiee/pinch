@@ -3,7 +3,7 @@
 // Request validation for items and settings. Each validator returns an error message or null.
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
-const ITEM_FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDuration', 'feeling', 'store', 'notes'];
+const ITEM_FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDuration', 'feeling', 'store', 'notes', 'boughtAt', 'goals'];
 const TEXT_LIMITS = { name: 200, currency: 10, goal: 100, urgency: 100, lockDuration: 100, feeling: 100, store: 200 };
 const MAX_NOTES = 100;
 const MAX_NOTE_LENGTH = 500;
@@ -51,6 +51,19 @@ function validateItem(body) {
     const byteLength = encoded.length / 4 * 3 - padding;
     if (byteLength > MAX_IMAGE_BYTES) return 'image must not exceed 2 MiB';
     if (Buffer.from(encoded, 'base64').toString('base64') !== encoded) return 'image must contain valid base64';
+  }
+  if (body.goals !== undefined) {
+    if (!Array.isArray(body.goals) || body.goals.length > 12) return 'goals must be an array of at most 12 categories';
+    const seen = new Set();
+    for (const goal of body.goals) {
+      if (typeof goal !== 'string' || !goal.trim() || goal.length > 100) return 'each goal must be 1 to 100 characters';
+      if (seen.has(goal.trim().toLowerCase())) return 'goals must be unique';
+      seen.add(goal.trim().toLowerCase());
+    }
+  }
+  if (body.boughtAt !== undefined && body.boughtAt !== null &&
+      (typeof body.boughtAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(body.boughtAt) || !Number.isFinite(Date.parse(body.boughtAt)))) {
+    return 'boughtAt must be an ISO date or null';
   }
   if (body.notes !== undefined) {
     if (!Array.isArray(body.notes) || body.notes.length > MAX_NOTES) return `notes must be an array of at most ${MAX_NOTES} entries`;

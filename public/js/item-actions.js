@@ -14,6 +14,8 @@
     close: 'm256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z',
     check: 'M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z',
     chevron: 'M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z',
+    bag: 'M240-80q-33 0-56.5-23.5T160-160v-480q0-33 23.5-56.5T240-720h80q0-66 47-113t113-47q66 0 113 47t47 113h80q33 0 56.5 23.5T800-640v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-480h-80v80q0 17-11.5 28.5T600-520q-17 0-28.5-11.5T560-560v-80H400v80q0 17-11.5 28.5T360-520q-17 0-28.5-11.5T320-560v-80h-80v480Zm160-560h160q0-33-23.5-56.5T480-800q-33 0-56.5 23.5T400-720ZM240-160v-480 480Z',
+    bought: 'm424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z',
     back: 'M400-80 0-480l400-400 71 71-329 329 329 329-71 71Z',
     forward: 'm321-80-71-71 329-329-329-329 71-71 400 400L321-80Z'
   };
@@ -22,6 +24,18 @@
   function ordinal(day) {
     const lastTwo = day % 100;
     return `${day}${lastTwo >= 11 && lastTwo <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th')}`;
+  }
+
+  // Every category on an item; older items only have a single `goal`.
+  const goalsOf = (item) => (Array.isArray(item.goals) && item.goals.length ? item.goals : item.goal ? [item.goal] : []);
+  // "A", "A and B", "A, B and C".
+  const joinList = (list) => (list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`);
+  window.pinchGoals = goalsOf;
+  window.pinchJoinList = joinList;
+
+  function boughtText(item) {
+    const date = new Date(item.boughtAt);
+    return Number.isFinite(date.getTime()) ? `Bought on the ${ordinal(date.getDate())} of ${date.toLocaleDateString(undefined, { month: 'long' })} ${date.getFullYear()}` : 'Bought';
   }
 
   function unlockText(item) {
@@ -51,7 +65,7 @@
   }
 
   const fabClosed = (name) => `<button type="button" class="pj-fab-btn" data-action="fab-open" aria-expanded="false" aria-label="Actions for ${esc(name)}">${icon('more')}</button>`;
-  const fabOpen = (name) => `<button type="button" class="pj-fab-btn" data-action="item-edit" aria-label="Edit ${esc(name)}">${icon('edit')}</button><button type="button" class="pj-fab-btn" data-action="item-lock" aria-label="Change unlock date">${icon('calendar')}</button><button type="button" class="pj-fab-btn is-danger" data-action="item-delete" aria-label="Delete ${esc(name)}">${icon('del')}</button><span class="pj-fab-divider" aria-hidden="true"></span><button type="button" class="pj-fab-btn" data-action="fab-close" aria-label="Close actions">${icon('close')}</button>`;
+  const fabOpen = (name, bought) => `<button type="button" class="pj-fab-btn" data-action="item-edit" aria-label="Edit ${esc(name)}">${icon('edit')}</button><button type="button" class="pj-fab-btn" data-action="item-lock" aria-label="Change unlock date">${icon('calendar')}</button><button type="button" class="pj-fab-btn${bought ? ' is-on' : ''}" data-action="item-bought" aria-pressed="${bought}" aria-label="${bought ? `Mark ${esc(name)} as not bought` : `Mark ${esc(name)} as bought`}" title="${bought ? 'Bought' : 'Mark as bought'}">${icon('bag')}</button><button type="button" class="pj-fab-btn is-danger" data-action="item-delete" aria-label="Delete ${esc(name)}">${icon('del')}</button><span class="pj-fab-divider" aria-hidden="true"></span><button type="button" class="pj-fab-btn" data-action="fab-close" aria-label="Close actions">${icon('close')}</button>`;
   const fabConfirm = (name) => `<span class="pj-fab-question" id="pj-confirm-text">Delete this item?</span><button type="button" class="pj-fab-btn" data-action="fab-close" aria-label="Keep ${esc(name)}">${icon('close')}</button><button type="button" class="pj-fab-btn is-danger" data-action="item-delete-confirm" aria-label="Yes, delete ${esc(name)}">${icon('check')}</button>`;
 
   // Edit pop-ups, shared by the wishlist card and the item page.
@@ -83,17 +97,19 @@
   }
 
   function editSheet(item, settings, onUpdate) {
+    const current = goalsOf(item);
     const categories = settings.categories.map((c) => c.name);
-    if (item.goal && !categories.includes(item.goal)) categories.push(item.goal);
+    current.forEach((goal) => { if (!categories.includes(goal)) categories.push(goal); });
+    const color = (name) => (settings.categories.find((c) => c.name === name) || {}).color || 'grey';
     const body = `<label class="pj-sheet-field"><span>Name</span><input name="name" maxlength="200" required value="${esc(item.name)}" autocomplete="off"></label>
       <div class="pj-sheet-pair"><label class="pj-sheet-field"><span>Price</span><input name="price" type="number" min="0" step="any" inputmode="decimal" value="${esc(item.price)}"></label>
       <label class="pj-sheet-field pj-sheet-currency"><span>Currency</span><select name="currency">${CURRENCIES.map((c) => `<option${c === item.currency ? ' selected' : ''}>${c}</option>`).join('')}</select></label></div>
       <label class="pj-sheet-field"><span>Store</span><input name="store" maxlength="200" placeholder="e.g. apple.com" value="${esc(item.store)}" autocomplete="off"></label>
-      <label class="pj-sheet-field"><span>Category</span><select name="goal"><option value="">None</option>${categories.map((c) => `<option${c === item.goal ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>`;
+      <fieldset class="pj-sheet-field pj-sheet-goals"><legend>Categories</legend><div class="pj-sheet-chips">${categories.map((c) => `<label class="pj-sheet-chip"><input type="checkbox" name="goals" value="${esc(c)}"${current.includes(c) ? ' checked' : ''}><span class="pj-tag pj-${esc(color(c))}">${esc(c)}</span></label>`).join('')}</div></fieldset>`;
     sheet('Edit item', body, async (data) => {
       const name = String(data.get('name')).trim();
       if (!name) throw new Error('Please enter an item name.');
-      await onUpdate(item.id, { name, price: String(data.get('price')), currency: String(data.get('currency')), goal: String(data.get('goal')), store: String(data.get('store')) });
+      await onUpdate(item.id, { name, price: String(data.get('price')), currency: String(data.get('currency')), goals: data.getAll('goals').map(String), store: String(data.get('store')) });
     });
   }
 
@@ -121,17 +137,17 @@
   }
 
   window.pinchItemSheets = { edit: editSheet, lock: lockSheet };
-  window.pinchItemFormat = { esc, icon, money, unlockText, mood: (item) => MOODS[String(item.feeling || '').toLowerCase()] || 'neutral' };
+  window.pinchItemFormat = { esc, icon, money, unlockText, boughtText, mood: (item) => MOODS[String(item.feeling || '').toLowerCase()] || 'neutral' };
 
   window.pinchItemCard = function pinchItemCard(item, settings) {
     const name = item.name || item.title || '';
-    const category = item.goal || item.category || '';
+    const categories = goalsOf(item).map((goal) => goal.toLowerCase());
     const mood = MOODS[String(item.feeling || '').toLowerCase()] || 'neutral';
     const image = typeof item.image === 'string' ? item.image : '';
-    return `<article class="pj-card pj-item" data-id="${esc(item.id)}" data-category="${esc(category.toLowerCase())}" data-name="${esc(String(name).toLowerCase())}">
+    return `<article class="pj-card pj-item${item.boughtAt ? ' is-bought' : ''}" data-id="${esc(item.id)}" data-categories="${esc(categories.join('|'))}" data-name="${esc(String(name).toLowerCase())}">
       <div class="pj-item-head"><img class="pj-item-mood" src="./assets/journey/${mood}.svg" alt="${esc(item.feeling ? `Feeling ${item.feeling.toLowerCase()}` : '')}"><h2><button type="button" class="pj-item-open" data-action="open-item">${esc(name)}</button></h2></div>
       <div class="pj-item-image" data-action="open-item">${image ? `<img src="${esc(image)}" alt="">` : ''}<div class="pj-fab" data-state="closed">${fabClosed(name)}</div></div>
-      <div class="pj-item-info"><p class="pj-unlock">${esc(unlockText(item))}</p>${costBlock(item, settings)}</div>
+      <div class="pj-item-info">${item.boughtAt ? `<p class="pj-unlock pj-bought">${icon('bought', 18)}<span>${esc(boughtText(item))}</span></p>` : `<p class="pj-unlock">${esc(unlockText(item))}</p>`}${costBlock(item, settings)}</div>
     </article>`;
   };
 
@@ -142,9 +158,10 @@
 
     function setFab(fab, state) {
       const card = fab.closest('.pj-item');
-      const name = (byId.get(card.dataset.id) || {}).name || '';
+      const entry = byId.get(card.dataset.id) || {};
+      const name = entry.name || '';
       fab.dataset.state = state;
-      fab.innerHTML = state === 'open' ? fabOpen(name) : state === 'confirm' ? fabConfirm(name) : fabClosed(name);
+      fab.innerHTML = state === 'open' ? fabOpen(name, Boolean(entry.boughtAt)) : state === 'confirm' ? fabConfirm(name) : fabClosed(name);
       const first = fab.querySelector(state === 'closed' ? '[data-action="fab-open"]' : state === 'confirm' ? '[data-action="fab-close"]' : '[data-action="item-edit"]');
       if (first) first.focus({ preventScroll: true });
     }
@@ -175,6 +192,15 @@
         case 'fab-close': setFab(fab, 'closed'); return true;
         case 'item-edit': setFab(fab, 'closed'); if (item) editSheet(item, settings, onUpdate); return true;
         case 'item-lock': setFab(fab, 'closed'); if (item) lockSheet(item, onUpdate); return true;
+        case 'item-bought': {
+          if (!item) return true;
+          button.disabled = true;
+          Promise.resolve(onUpdate(item.id, { boughtAt: item.boughtAt ? null : new Date().toISOString() })).catch(() => {
+            button.disabled = false;
+            window.alert('Could not update this item. Check your connection and try again.');
+          });
+          return true;
+        }
         case 'item-delete': setFab(fab, 'confirm'); return true;
         case 'item-delete-confirm': {
           button.disabled = true;

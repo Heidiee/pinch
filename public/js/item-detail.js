@@ -30,13 +30,16 @@
     const content = sheet.querySelector('.pd-content');
     document.body.appendChild(sheet);
 
-    const categoryColor = () => (settings.categories.find((c) => c.name === item.goal) || {}).color || 'grey';
+    const categoryColor = (name) => (settings.categories.find((c) => c.name === name) || {}).color || 'grey';
+    const goals = () => window.pinchGoals(item);
 
     function detailsPanel() {
       const added = item.createdAt ? new Date(item.createdAt) : null;
       const unlock = window.pinchUnlockDate ? window.pinchUnlockDate(item) : null;
+      const bought = item.boughtAt ? new Date(item.boughtAt) : null;
       const rows = [
-        ['Category', item.goal || '—'],
+        ['Status', bought ? `Bought ${dateLabel(bought)}` : unlock && unlock <= new Date() ? 'Unlocked' : 'Waiting'],
+        [goals().length > 1 ? 'Categories' : 'Category', goals().join(', ') || '—'],
         ['Added', dateLabel(added)],
         ['Unlocks', unlock ? dateLabel(unlock) : '—'],
         ['Waiting period', item.lockDuration ? item.lockDuration.toLowerCase() : 'No lock'],
@@ -75,7 +78,7 @@
         <div class="pd-image">${image ? `<img src="${esc(image)}" alt="${esc(item.name)}">` : ''}</div>
         <div class="pd-info">
           <div class="pd-title"><h1 id="pd-title" tabindex="-1">${esc(item.name)}</h1><div class="pd-title-actions"><img class="pd-mood" src="./assets/journey/${mood(item)}.svg" alt="${esc(item.feeling ? `Feeling ${item.feeling.toLowerCase()}` : '')}"><button type="button" class="pd-edit" data-action="edit" aria-label="Edit ${esc(item.name)}">${icon('edit', 20)}</button></div></div>
-          ${item.goal ? `<span class="pd-tag pj-${esc(categoryColor())}">${esc(item.goal)}</span>` : ''}
+          ${goals().length ? `<div class="pd-tags">${goals().map((goal) => `<span class="pd-tag pj-${esc(categoryColor(goal))}">${esc(goal)}</span>`).join('')}</div>` : ''}
           ${price ? `<p class="pd-price">${esc(price)}</p>` : ''}
         </div>
         <div class="pd-tabs" role="tablist" aria-label="Item information">${TABS.map(([id, label]) => `<button type="button" role="tab" id="pd-tab-${id}" aria-controls="pd-panel" aria-selected="${id === activeTab}" tabindex="${id === activeTab ? 0 : -1}" data-action="tab" data-tab="${id}">${esc(label)}${id === 'notes' && item.notes && item.notes.length ? ` (${item.notes.length})` : ''}</button>`).join('')}</div>

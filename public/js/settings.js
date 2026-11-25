@@ -41,13 +41,13 @@
   }
 
   function exportCsv(items, settings) {
-    const header = ['Name', 'Price', 'Currency', 'True cost', 'Category', 'Urgency', 'Lock', 'Feeling', 'Added', 'Unlocks'];
+    const header = ['Name', 'Price', 'Currency', 'True cost', 'Categories', 'Urgency', 'Lock', 'Feeling', 'Added', 'Unlocks'];
     const rows = items.map((item) => {
       const unlock = window.pinchUnlockDate ? window.pinchUnlockDate(item) : null;
       const added = item.createdAt ? new Date(item.createdAt) : null;
       const price = item.price === '' || item.price == null ? NaN : Number(item.price);
       const cost = Number.isFinite(price) ? Math.round(price * (settings.showTaxInCost ? 1 + (Number(settings.taxRate) || 0) / 100 : 1) * 100) / 100 : '';
-      return [item.name, item.price, item.currency, cost, item.goal, item.urgency,
+      return [item.name, item.price, item.currency, cost, (window.pinchGoals ? window.pinchGoals(item) : [item.goal]).join('; '), item.urgency,
         item.lockDuration, item.feeling, localDate(added), localDate(unlock)];
     });
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n');

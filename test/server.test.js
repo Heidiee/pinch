@@ -67,12 +67,12 @@ test('creates and retrieves UI-shaped items with consistent response schemas', a
   const response = await post(input);
   assert.equal(response.status, 201);
   const { item } = await response.json();
-  assert.deepEqual(item, { ...input, name: 'Notebook', id: '1', store: '', notes: [] });
+  assert.deepEqual(item, { ...input, name: 'Notebook', id: '1', store: '', notes: [], boughtAt: null, goals: ['Education'] });
   const list = await fetch(`${base}/api/items`);
   assert.equal(list.status, 200);
   assert.deepEqual(await list.json(), { items: [item] });
   const minimal = await post({ name: 'Pen', price: 0 });
-  assert.deepEqual(await minimal.json(), { item: { id: '2', name: 'Pen', price: 0, currency: 'CAD', image: null, goal: '', urgency: '', lockDuration: '', feeling: '', store: '', notes: [] } });
+  assert.deepEqual(await minimal.json(), { item: { id: '2', name: 'Pen', price: 0, currency: 'CAD', image: null, goal: '', urgency: '', lockDuration: '', feeling: '', store: '', notes: [], boughtAt: null, goals: [] } });
 });
 
 test('exposes MongoDB creation timestamps for calendar scheduling', async () => {
@@ -195,7 +195,7 @@ test('updates an item with a partial patch and rejects bad updates', async () =>
   const patch = body => fetch(`${base}/api/items/a1`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   let response = await patch({ name: ' Desk lamp ', lockDuration: '2 Weeks' });
   assert.equal(response.status, 200);
-  assert.deepEqual((await response.json()).item, { id: 'a1', name: 'Desk lamp', price: '40', currency: 'CAD', image: null, goal: 'Essentials', urgency: '', lockDuration: '2 Weeks', feeling: 'Happy', store: '', notes: [] });
+  assert.deepEqual((await response.json()).item, { id: 'a1', name: 'Desk lamp', price: '40', currency: 'CAD', image: null, goal: 'Essentials', urgency: '', lockDuration: '2 Weeks', feeling: 'Happy', store: '', notes: [], boughtAt: null, goals: ['Essentials'] });
   for (const body of [{}, { name: '  ' }, { price: -5 }, { extra: 1 }, { goal: 7 }]) {
     response = await patch(body);
     assert.equal(response.status, 400, JSON.stringify(body));
@@ -231,6 +231,42 @@ test('stores a shop and notes on an item, and validates them', async () => {
     { notes: [{ text: 'x'.repeat(501), createdAt: '2026-10-10T12:00:00.000Z' }] }]) {
     response = await patch(body);
     assert.equal(response.status, 400, JSON.stringify(body));
+  }
+  documents = [];
+});
+
+test('marks an item as bought and back', async () => {
+  documents = [{ _id: 'b1', name: 'Headphones' }];
+  const patch = body => fetch(`${base}/api/items/b1`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  let response = await patch({ boughtAt: '2026-11-26T15:00:00.000Z' });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).item.boughtAt, '2026-11-26T15:00:00.000Z');
+  response = await patch({ boughtAt: null });
+  assert.equal((await response.json()).item.boughtAt, null);
+  for (const boughtAt of ['today', 5, true, '2026-11-26']) {
+    response = await patch({ boughtAt });
+    assert.equal(response.status, 400, JSON.stringify(boughtAt));
+  }
+  documents = [];
+});
+
+test('stores several categories on an item and keeps goal as the first', async () => {
+  documents = [];
+  let response = await post({ name: 'Backpack', goals: [' Travel ', 'Essentials'] });
+  assert.equal(response.status, 201);
+  let { item } = await response.json();
+  assert.deepEqual(item.goals, ['Travel', 'Essentials']);
+  assert.equal(item.goal, 'Travel');
+  const patch = body => fetch(`${base}/api/items/${item.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  response = await patch({ goals: ['Fashion'] });
+  ({ item } = await response.json());
+  assert.deepEqual([item.goal, item.goals], ['Fashion', ['Fashion']]);
+  response = await patch({ goals: [] });
+  ({ item } = await response.json());
+  assert.deepEqual([item.goal, item.goals], ['', []]);
+  for (const goals of ['Travel', [''], [5], ['a', 'A'], Array.from({ length: 13 }, (_, i) => `g${i}`)]) {
+    response = await patch({ goals });
+    assert.equal(response.status, 400, JSON.stringify(goals));
   }
   documents = [];
 });

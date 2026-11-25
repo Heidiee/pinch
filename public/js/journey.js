@@ -26,17 +26,17 @@
 
   window.mountJourney = function mountJourney(root, { onComplete = () => {}, onHome = () => {}, onSettings = () => {}, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
     let step = 0;
-    const item = { name: '', price: '', currency: settings.currency, image: null, goal: '', urgency: '', lockDuration: settings.defaultLockDuration, feeling: '' };
+    const item = { name: '', price: '', currency: settings.currency, image: null, goal: '', goals: [], urgency: '', lockDuration: settings.defaultLockDuration, feeling: '' };
     const nodes = ['17:1839', '17:1922', '17:2025', '17:2102', '17:2174', '20:2237', '20:2427'];
     function render() {
       let body = '';
       if (step === 0) body = `<div class="pj-polaroid pj-intro">${illustration(false)}<h1>Log what you’re wishing for!</h1><p>Pause and consider how certain items make you feel, does it align with your current goals and aspirations?</p></div><div class="pj-intro-next">${next('Let’s try it!')}</div>`;
       if (step === 1) body = `<div class="pj-heading"><h1>Let’s add your first item</h1></div><div class="pj-fields"><label class="pj-input"><span class="pj-sr">Item name</span><input name="name" placeholder="Item name" value="${esc(item.name)}"></label><label class="pj-input pj-price"><span class="pj-sr">Price</span><input name="price" type="number" min="0" step="any" placeholder="Price" value="${esc(item.price)}"><select name="currency" aria-label="Currency">${['CAD','USD','EUR','GBP','AUD'].map(c => `<option${item.currency === c ? ' selected' : ''}>${c}</option>`).join('')}</select></label><label class="pj-next pj-upload">Input image ${img('upload')}<input name="image" type="file" accept="image/*"></label>${item.image ? '<span class="pj-file-status">Image added</span>' : ''}${next()}<button type="button" class="pj-back" data-action="back">Back</button></div>`;
-      if (step === 2) body = `<div class="pj-heading"><h1>Which goal are you reaching for with this item?</h1></div><div class="pj-goals">${settings.categories.map(({ name: v, color: c }) => tag(v,c,item.goal === v)).join('')}</div>${navigation(step)}`;
+      if (step === 2) body = `<div class="pj-heading"><h1>Which goal are you reaching for with this item?</h1><p>Pick all that apply.</p></div><div class="pj-goals">${settings.categories.map(({ name: v, color: c }) => tag(v,c,item.goals.includes(v))).join('')}</div>${navigation(step)}`;
       if (step === 3) body = `<div class="pj-heading"><h1>Do you need this item right now?</h1></div><div class="pj-options pj-urgency">${[['yes, urgently','coral'],['I can wait...','green'],['not urgent at all','blue']].map(([v,c]) => tag(v,c,item.urgency === v)).join('')}</div>${navigation(step)}`;
       if (step === 4) body = `<div class="pj-heading"><h1>Take some time to make sure it’s a keeper.</h1><p>You can lock the item for a while, giving you the space to make a decision you’ll feel great about.</p></div><div class="pj-options pj-duration">${[['1 Day','coral'],['1 Week','orange'],['2 Weeks','green'],['1 Month','blue']].map(([v,c]) => tag(v,c,item.lockDuration === v)).join('')}<label class="pj-custom"><span class="pj-sr">Custom lock duration</span><input name="custom" placeholder="custom input" value="${esc(!['1 Day','1 Week','2 Weeks','1 Month'].includes(item.lockDuration) ? item.lockDuration : '')}"></label></div>${navigation(step)}`;
       if (step === 5) body = `<div class="pj-heading"><h1>How does spending money on this item make you feel?</h1></div><div class="pj-moods">${['Excited','Happy','Neutral','Sad','Upset'].map(v => `<button type="button" data-action="choice" data-value="${v}" class="pj-mood${item.feeling === v ? ' is-selected' : ''}" aria-pressed="${item.feeling === v}">${img(v.toLowerCase() + (item.feeling === v ? '-selected' : ''))}<span>${v}</span></button>`).join('')}</div>${navigation(step)}`;
-      if (step === 6) body = `<div class="pj-polaroid pj-summary">${illustration(true)}<h1>Nice! you logged your first item</h1><div class="pj-summary-line pj-purple">${item.name ? `<strong>${esc(item.name)}</strong>` : 'Your item'}${item.goal ? ` for <strong>${esc(item.goal.toLowerCase())}</strong> purposes` : ''}.</div><div class="pj-summary-line pj-blue">${item.lockDuration ? `It will be locked for <strong>${esc(item.lockDuration.toLowerCase())}</strong>.` : 'No lock duration selected.'}</div><div class="pj-summary-line pj-green">${item.feeling ? `Paying for it makes you feel <strong>${esc(item.feeling.toLowerCase())}</strong>.` : 'No feeling selected.'}</div></div><div class="pj-intro-next">${next()}</div><button type="button" class="pj-back pj-summary-back" data-action="back">Back</button>`;
+      if (step === 6) body = `<div class="pj-polaroid pj-summary">${illustration(true)}<h1>Nice! you logged your first item</h1><div class="pj-summary-line pj-purple">${item.name ? `<strong>${esc(item.name)}</strong>` : 'Your item'}${item.goals.length ? ` for <strong>${esc(window.pinchJoinList(item.goals).toLowerCase())}</strong> purposes` : ''}.</div><div class="pj-summary-line pj-blue">${item.lockDuration ? `It will be locked for <strong>${esc(item.lockDuration.toLowerCase())}</strong>.` : 'No lock duration selected.'}</div><div class="pj-summary-line pj-green">${item.feeling ? `Paying for it makes you feel <strong>${esc(item.feeling.toLowerCase())}</strong>.` : 'No feeling selected.'}</div></div><div class="pj-intro-next">${next()}</div><button type="button" class="pj-back pj-summary-back" data-action="back">Back</button>`;
       root.innerHTML = `<section class="pj-screen" data-node-id="${nodes[step]}"><header class="pj-brand">${img('logo')}<span>Pinch</span></header><div class="pj-content"><div class="pj-progress">${img('page' + (step + 1))}</div>${body}</div>${tabbar}</section>`;
     }
     root.onclick = (event) => {
@@ -63,7 +63,16 @@
           window.alert('Could not save your item. Check your connection and try again.');
         });
       }
-      else if (action === 'skip') { item[{ 2:'goal', 3:'urgency', 4:'lockDuration', 5:'feeling' }[step]] = ''; step++; render(); }
+      else if (action === 'skip') { if (step === 2) { item.goals = []; item.goal = ''; } else item[{ 3:'urgency', 4:'lockDuration', 5:'feeling' }[step]] = ''; step++; render(); }
+      else if (action === 'choice' && step === 2) {
+        // Categories are multi-select: each tap toggles one on or off.
+        const value = button.dataset.value;
+        item.goals = item.goals.includes(value) ? item.goals.filter(goal => goal !== value) : [...item.goals, value];
+        item.goal = item.goals[0] || '';
+        const on = item.goals.includes(value);
+        button.classList.toggle('is-selected', on);
+        button.setAttribute('aria-pressed', String(on));
+      }
       else if (action === 'choice') {
         const key = { 2:'goal', 3:'urgency', 4:'lockDuration', 5:'feeling' }[step];
         item[key] = button.dataset.value;
@@ -119,23 +128,13 @@
   };
 
   function renderHome(root, { onAdd, onSettings, onOpen, onUpdate, onDelete, settings }, items) {
-    const item = items[items.length - 1];
     const cards = items.map(entry => window.pinchItemCard(entry, settings)).join('');
     const categories = [['All','grey'], ...settings.categories.map(({ name, color }) => [name, color])];
-    const date = new Date();
-    const dates = Array.from({length: 7}, (_, i) => { const d = new Date(date.getFullYear(), date.getMonth(), date.getDate() + i); return `<div class="pj-date"><span>${d.toLocaleDateString(undefined,{weekday:'short'})}</span><div>${d.getDate()}${img('lock')}</div></div>`; }).join('');
-    let calendarView = 'week';
-    const calendarCard = () => {
-      const monthView = calendarView === 'month';
-      const description = monthView
-        ? nextUnlockMessage(items)
-        : item && item.lockDuration ? `Your latest item is locked for ${esc(item.lockDuration)}.` : 'Your upcoming unlocks will appear here.';
-      return `<div class="pj-card pj-calendar"><div class="pj-card-heading"><h2>Calendar</h2><div class="pj-calendar-icons"><button type="button" class="pj-calendar-toggle" data-action="calendar-month" aria-label="Show monthly calendar" aria-pressed="${monthView}">${img(monthView ? 'calendar-today' : 'calendar-month')}</button><button type="button" class="pj-calendar-toggle" data-action="calendar-week" aria-label="Show weekly calendar" aria-pressed="${!monthView}">${img(monthView ? 'calendar-month' : 'calendar-today')}</button></div></div><p>${description}</p>${monthView ? renderMonthCalendar(items) : `<div class="pj-dates">${dates}</div>`}</div>`;
-    };
-    root.innerHTML = `<section class="pj-home" data-node-id="25:3072"><div class="pj-home-inner"><h1>Your Wishlist</h1><label class="pj-search">${img('search')}<span class="pj-sr">Search item</span><input type="search" placeholder="Search item"></label><div class="pj-filters">${categories.map(([v,c]) => tag(v,c,v === 'All','filter')).join('')}</div>${calendarCard()}${cards || '<div class="pj-empty">Your wishlist is empty. Add an item to get started.</div>'}<p class="pj-no-results" hidden>No matching items.</p></div><nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home" aria-current="page">${img('home')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Settings" data-action="settings">${img('info')}</button></nav></section>`;
+    root.innerHTML = `<section class="pj-home" data-node-id="25:3072"><div class="pj-home-inner"><h1>Your Wishlist</h1><label class="pj-search">${img('search')}<span class="pj-sr">Search item</span><input type="search" placeholder="Search item"></label><div class="pj-filters">${categories.map(([v,c]) => tag(v,c,v === 'All','filter')).join('')}</div><div class="pj-card pj-calendar"></div>${cards || '<div class="pj-empty">Your wishlist is empty. Add an item to get started.</div>'}<p class="pj-no-results" hidden>No matching items.</p></div><nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home" aria-current="page">${img('home')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Settings" data-action="settings">${img('info')}</button></nav></section>`;
+    window.pinchCalendar(root.querySelector('.pj-calendar'), { items, onOpen });
     const filters = new Set(); // empty = All
     const search = root.querySelector('.pj-search input');
-    const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (!filters.size || filters.has(card.dataset.category)) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
+    const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (!filters.size || card.dataset.categories.split('|').some(c => filters.has(c))) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
     const itemActions = window.pinchItemActions(root, { items, settings, onUpdate, onDelete, onOpen });
     root.onclick = (event) => {
       if (itemActions(event)) return;
@@ -143,10 +142,6 @@
       if (!button || !root.contains(button)) return;
       if (button.dataset.action === 'add') onAdd();
       if (button.dataset.action === 'settings') onSettings();
-      if (button.dataset.action === 'calendar-month' || button.dataset.action === 'calendar-week') {
-        calendarView = button.dataset.action === 'calendar-month' ? 'month' : 'week';
-        root.querySelector('.pj-calendar').outerHTML = calendarCard();
-      }
       if (button.dataset.action === 'filter') {
         // Categories toggle on and off together; "All" clears them.
         const value = button.dataset.value.toLowerCase();
@@ -189,63 +184,4 @@
     return unlockDate;
   }
 
-  function dateKey(date) {
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-  }
-
-  function ordinal(day) {
-    const lastTwoDigits = day % 100;
-    const suffix = lastTwoDigits >= 11 && lastTwoDigits <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] || 'th');
-    return `${day}${suffix}`;
-  }
-
-  function nextUnlockMessage(items) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const nextUnlock = items.map(getUnlockDate).filter(date => date && date >= today).sort((a, b) => a - b)[0];
-    if (!nextUnlock) return 'Your upcoming unlocks will appear here.';
-    const month = nextUnlock.toLocaleDateString(undefined, { month: 'long' });
-    return `Your next item unlocks on the ${ordinal(nextUnlock.getDate())} of ${month}, congratulations!`;
-  }
-
-  function renderMonthCalendar(items) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const firstOfMonth = new Date(year, month, 1);
-    const leadingDays = (firstOfMonth.getDay() + 6) % 7;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cellCount = Math.ceil((leadingDays + daysInMonth) / 7) * 7;
-    const scheduledDays = new Map();
-    const schedules = items.map(item => {
-      const createdAt = typeof item.createdAt === 'string' ? new Date(item.createdAt) : null;
-      const unlockDate = getUnlockDate(item);
-      return createdAt && Number.isFinite(createdAt.getTime()) && unlockDate
-        ? { createdAt, unlockDate }
-        : null;
-    }).filter(Boolean);
-    const addScheduledDay = (day, status) => {
-      if (day.getFullYear() !== year || day.getMonth() !== month) return;
-      const key = dateKey(day);
-      if (status === 'unlocked' || !scheduledDays.has(key)) scheduledDays.set(key, status);
-    };
-    schedules.forEach(({ createdAt, unlockDate }) => {
-      addScheduledDay(createdAt, 'locked');
-      addScheduledDay(unlockDate, 'unlocked');
-    });
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      .map(day => `<span class="pj-calendar-weekday" role="columnheader">${day}</span>`).join('');
-    const cells = Array.from({ length: cellCount }, (_, index) => {
-      const day = index - leadingDays + 1;
-      if (day < 1 || day > daysInMonth) return '<span class="pj-calendar-day is-empty" aria-hidden="true"></span>';
-      const current = new Date(year, month, day);
-      const status = scheduledDays.get(dateKey(current));
-      const label = current.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-      const statusLabel = status === 'locked' ? ', locked' : status === 'unlocked' ? ', unlocked' : '';
-      const lockIcon = status === 'locked' ? img('month-lock') : status === 'unlocked' ? img('month-lock-open') : '';
-      return `<div class="pj-calendar-day${status ? ` is-${status}` : ''}" role="gridcell" aria-label="${label}${statusLabel}"><span>${day}</span>${lockIcon}</div>`;
-    }).join('');
-    const label = firstOfMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    return `<div class="pj-calendar-grid" role="grid" aria-label="${label}">${weekdays}${cells}</div>`;
-  }
 })();

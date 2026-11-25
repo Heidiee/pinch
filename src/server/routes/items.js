@@ -13,6 +13,9 @@ function serializeItem(item) {
   // Items saved before these fields existed get empty defaults.
   result.store = item.store ?? '';
   result.notes = Array.isArray(item.notes) ? item.notes : [];
+  result.boughtAt = item.boughtAt ?? null;
+  // Older items have a single `goal`; expose it as a one-entry list.
+  result.goals = Array.isArray(item.goals) ? item.goals : item.goal ? [item.goal] : [];
   const createdAt = item.createdAt instanceof Date ? item.createdAt : item._id?.getTimestamp?.();
   if (createdAt instanceof Date && Number.isFinite(createdAt.getTime())) result.createdAt = createdAt.toISOString();
   return result;
@@ -35,8 +38,11 @@ function itemsRouter(collection) {
       name: req.body.name.trim(), price: req.body.price ?? '', currency: req.body.currency ?? 'CAD',
       image: req.body.image ?? null, goal: req.body.goal ?? '', urgency: req.body.urgency ?? '',
       lockDuration: req.body.lockDuration ?? '', feeling: req.body.feeling ?? '',
-      store: req.body.store ?? '', notes: req.body.notes ?? []
+      store: req.body.store ?? '', notes: req.body.notes ?? [], boughtAt: req.body.boughtAt ?? null
     };
+    // `goals` holds every category; `goal` mirrors the first one for older clients.
+    item.goals = (req.body.goals ?? (item.goal ? [item.goal] : [])).map(goal => goal.trim());
+    if (req.body.goals) item.goal = item.goals[0] || '';
     try {
       const result = await collection.insertOne(item);
       res.status(201).json({ item: serializeItem({ ...item, _id: result.insertedId }) });
@@ -49,6 +55,10 @@ function itemsRouter(collection) {
     const update = { ...req.body };
     if (typeof update.name === 'string') update.name = update.name.trim();
     if (typeof update.store === 'string') update.store = update.store.trim();
+    if (Array.isArray(update.goals)) {
+      update.goals = update.goals.map(goal => goal.trim());
+      update.goal = update.goals[0] || '';
+    }
     if (Array.isArray(update.notes)) update.notes = update.notes.map(({ text, createdAt }) => ({ text: text.trim(), createdAt }));
     try {
       const item = await collection.findOneAndUpdate({ _id: itemId(req.params.id) }, { $set: update }, { returnDocument: 'after' });
