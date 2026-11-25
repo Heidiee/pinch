@@ -13,3 +13,111 @@ input[type="submit"]:active {
     outline: none;
     outline-offset: 0;
 }
+
+/* ---- Motion: smooth press, hover and selection ---- */
+:root {
+    --pinch-ease-out: cubic-bezier(.2, .8, .2, 1);
+    --pinch-press: 90ms;
+    --pinch-release: 180ms;
+}
+
+button,
+[role="button"],
+label,
+.pj-tag,
+.af-choice,
+.ob-option {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition:
+        translate var(--pinch-release) var(--pinch-ease-out),
+        scale var(--pinch-release) var(--pinch-ease-out),
+        box-shadow var(--pinch-release) var(--pinch-ease-out),
+        background-color 200ms ease,
+        color 200ms ease,
+        outline-color 200ms ease,
+        opacity 200ms ease;
+}
+
+/* Buttons with the offset shadow sink into their shadow when pressed or selected,
+   so losing the shadow reads as a physical press instead of a jump. */
+:where(.pj-next, .pj-tag, .af-next, .af-upload, .af-choice, .ob-next, .ob-back, .ob-option):active,
+:where(.pj-tag, .af-choice, .ob-option)[aria-pressed="true"],
+:where(.pj-tag, .af-choice, .ob-option).is-selected {
+    translate: -2px 3px;
+}
+
+:where(.pj-next, .pj-tag, .af-next, .af-upload, .af-choice, .ob-next, .ob-back, .ob-option):active {
+    transition-duration: var(--pinch-press);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    :where(.pj-next, .pj-tag, .af-next, .af-upload, .af-choice, .ob-next, .ob-back, .ob-option):not(:active, [aria-pressed="true"], .is-selected, :disabled):hover {
+        translate: 1px -1px;
+        box-shadow: -3px 4px 0 #090708;
+    }
+
+    :where(.pj-mood, .af-feelings button, .pj-tabbar button, .af-nav button, .pj-calendar-toggle):hover {
+        scale: 1.04;
+    }
+
+    :where(.pj-skip, .pj-back, .af-skip, .af-back):hover {
+        color: #090708 !important;
+    }
+}
+
+/* Icon and text buttons without a shadow get a light squeeze. */
+:where(.pj-mood, .af-feelings button, .pj-tabbar button, .af-nav button, .pj-calendar-toggle, .pj-skip, .pj-back, .af-skip, .af-back):active {
+    scale: .94;
+    transition-duration: var(--pinch-press);
+}
+
+/* Fade selection outlines in instead of popping them on. */
+.af-feelings button {
+    outline: 3px solid transparent;
+    outline-offset: 3px;
+}
+
+button:disabled,
+button[aria-busy="true"] {
+    opacity: .6;
+    cursor: progress;
+}
+
+/* New step content eases in. */
+@keyframes pinch-step-in {
+    from { opacity: 0; translate: 0 8px; }
+    to { opacity: 1; translate: none; }
+}
+
+.pj-content,
+.af-content,
+.ob-content,
+.pj-home-inner {
+    animation: pinch-step-in 260ms var(--pinch-ease-out) both;
+}
+
+/* Week/month calendar swap fades instead of snapping. */
+@keyframes pinch-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.pj-calendar .pj-dates,
+.pj-calendar .pj-calendar-grid {
+    animation: pinch-fade-in 200ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 1ms !important;
+        transition-duration: 1ms !important;
+    }
+
+    :where(button, [role="button"], label, .pj-tag, .af-choice, .ob-option) {
+        translate: none !important;
+        scale: none !important;
+    }
+}

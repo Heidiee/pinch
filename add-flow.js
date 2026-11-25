@@ -34,7 +34,15 @@
     root.onclick = event => {
       const button = event.target.closest('button');
       if (!button || !root.contains(button) || !button.closest('.af-screen')) return;
-      if (button.dataset.choice) { item[button.dataset.choice] = button.dataset.value; render(); return; }
+      if (button.dataset.choice) {
+        const key = button.dataset.choice;
+        item[key] = button.dataset.value;
+        // Update in place so the press and selection can animate instead of re-rendering.
+        root.querySelectorAll(`[data-choice="${key}"]`).forEach(choice => choice.setAttribute('aria-pressed', String(choice === button)));
+        const custom = key === 'lockDuration' && root.querySelector('input[name="lockDuration"]');
+        if (custom) custom.value = '';
+        return;
+      }
       switch (button.dataset.action) {
         case 'home': onHome(); break;
         case 'add': step = 0; render(); break;
@@ -61,6 +69,7 @@
     };
     root.oninput = event => {
       if (event.target.closest('.af-screen') && ['name','price','lockDuration'].includes(event.target.name)) item[event.target.name] = event.target.value;
+      if (event.target.name === 'lockDuration') root.querySelectorAll('[data-choice="lockDuration"]').forEach(choice => choice.setAttribute('aria-pressed', String(choice.dataset.value === event.target.value)));
     };
     root.onchange = event => {
       if (!event.target.closest('.af-screen')) return;

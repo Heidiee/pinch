@@ -58,9 +58,26 @@
         });
       }
       else if (action === 'skip') { item[{ 2:'goal', 3:'urgency', 4:'lockDuration', 5:'feeling' }[step]] = ''; step++; render(); }
-      else if (action === 'choice') { const key = { 2:'goal', 3:'urgency', 4:'lockDuration', 5:'feeling' }[step]; item[key] = button.dataset.value; render(); }
+      else if (action === 'choice') {
+        const key = { 2:'goal', 3:'urgency', 4:'lockDuration', 5:'feeling' }[step];
+        item[key] = button.dataset.value;
+        const custom = root.querySelector('input[name="custom"]');
+        if (custom) custom.value = '';
+        syncChoices(item[key]);
+      }
     };
-    root.oninput = (event) => { const { name, value } = event.target; if (name === 'custom') item.lockDuration = value; else if (name === 'name' || name === 'price' || name === 'currency') item[name] = value; };
+    // Update the selected option in place so its press and selection can animate,
+    // instead of rebuilding the whole screen.
+    function syncChoices(value) {
+      root.querySelectorAll('[data-action="choice"]').forEach((choice) => {
+        const selected = choice.dataset.value === value;
+        choice.classList.toggle('is-selected', selected);
+        choice.setAttribute('aria-pressed', String(selected));
+        const face = choice.classList.contains('pj-mood') && choice.querySelector('img');
+        if (face) face.src = asset(choice.dataset.value.toLowerCase() + (selected ? '-selected' : ''));
+      });
+    }
+    root.oninput = (event) => { const { name, value } = event.target; if (name === 'custom') { item.lockDuration = value; syncChoices(value); } else if (name === 'name' || name === 'price' || name === 'currency') item[name] = value; };
     root.onchange = (event) => {
       if (event.target.name === 'currency') item.currency = event.target.value;
       if (event.target.name === 'image' && event.target.files[0]) {
