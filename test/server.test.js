@@ -3,7 +3,8 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { ObjectId } = require('mongodb');
-const { createApp, DEFAULT_SETTINGS } = require('../server');
+const { createApp } = require('../src/server/app');
+const { DEFAULT_SETTINGS } = require('../src/server/validation');
 
 let server;
 let base;
@@ -13,6 +14,20 @@ const collection = {
   find() {
     if (failDatabase) throw new Error('database unavailable');
     return { sort: () => ({ toArray: async () => documents.slice() }) };
+  },
+  async findOneAndUpdate(filter, { $set }) {
+    if (failDatabase) throw new Error('database unavailable');
+    const doc = documents.find(d => d._id === filter._id);
+    if (!doc) return null;
+    Object.assign(doc, structuredClone($set));
+    return { ...doc };
+  },
+  async deleteOne(filter) {
+    if (failDatabase) throw new Error('database unavailable');
+    const index = documents.findIndex(d => d._id === filter._id);
+    if (index === -1) return { deletedCount: 0 };
+    documents.splice(index, 1);
+    return { deletedCount: 1 };
   },
   async insertOne(item) {
     if (failDatabase) throw new Error('database unavailable');
@@ -120,11 +135,11 @@ test('returns JSON errors for malformed or oversized requests and database failu
 });
 
 test('serves only explicit frontend assets, not backend or hidden files', async () => {
-  for (const pathname of ['/', '/index.html', '/app.js', '/onboarding.js', '/journey.css', '/calendar.css', '/assets/add/logo.svg', '/assets/journey/page1.svg', '/assets/journey/month-lock.svg', '/assets/journey/month-lock-open.svg']) {
+  for (const pathname of ['/', '/index.html', '/js/app.js', '/js/onboarding.js', '/js/item-actions.js', '/css/base.css', '/css/journey.css', '/css/calendar.css', '/assets/pinch-logo.svg', '/assets/add/logo.svg', '/assets/journey/page1.svg', '/assets/journey/month-lock.svg', '/assets/journey/month-lock-open.svg']) {
     const response = await fetch(`${base}${pathname}`);
     assert.equal(response.status, 200, pathname);
   }
-  for (const pathname of ['/.env', '/.env.example', '/package.json', '/server.js', '/node_modules/express/package.json', '/assets/../server.js', '/api/missing']) {
+  for (const pathname of ['/.env', '/.env.example', '/package.json', '/server.js', '/src/server/app.js', '/test/server.test.js', '/node_modules/express/package.json', '/assets/../package.json', '/%2e%2e/package.json', '/api/missing']) {
     const response = await fetch(`${base}${pathname}`);
     assert.equal(response.status, 404, pathname);
     assert.deepEqual(await response.json(), { error: 'Not found' });
@@ -170,7 +185,34 @@ test('rejects invalid settings without saving', async () => {
 });
 
 test('serves the settings screen files', async () => {
-  for (const pathname of ['/settings.js', '/settings.css']) {
+  for (const pathname of ['/js/settings.js', '/css/settings.css']) {
     assert.equal((await fetch(`${base}${pathname}`)).status, 200, pathname);
   }
+});
+
+test('updates an item with a partial patch and rejects bad updates', async () => {
+  documents = [{ _id: 'a1', name: 'Lamp', price: '40', currency: 'CAD', image: null, goal: 'Essentials', urgency: '', lockDuration: '1 Week', feeling: 'Happy' }];
+  const patch = body => fetch(`${base}/api/items/a1`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  let response = await patch({ name: ' Desk lamp ', lockDuration: '2 Weeks' });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).item, { id: 'a1', name: 'Desk lamp', price: '40', currency: 'CAD', image: null, goal: 'Essentials', urgency: '', lockDuration: '2 Weeks', feeling: 'Happy' });
+  for (const body of [{}, { name: '  ' }, { price: -5 }, { extra: 1 }, { goal: 7 }]) {
+    response = await patch(body);
+    assert.equal(response.status, 400, JSON.stringify(body));
+  }
+  assert.equal(documents[0].name, 'Desk lamp');
+  response = await fetch(`${base}/api/items/missing`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'x' }) });
+  assert.equal(response.status, 404);
+  documents = [];
+});
+
+test('deletes an item and returns 404 for unknown ids', async () => {
+  documents = [{ _id: 'd1', name: 'Mug' }, { _id: 'd2', name: 'Pen' }];
+  let response = await fetch(`${base}/api/items/d1`, { method: 'DELETE' });
+  assert.equal(response.status, 204);
+  assert.deepEqual(documents.map(d => d._id), ['d2']);
+  response = await fetch(`${base}/api/items/d1`, { method: 'DELETE' });
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { error: 'Item not found' });
+  documents = [];
 });

@@ -13,9 +13,32 @@ cp .env.example .env
 npm start
 ```
 
-`MONGODB_URI` is required; `MONGODB_DB_NAME` defaults to `pinch` and overrides any database specified in the URI. `PORT` defaults to `3000`. The server connects and pings MongoDB before listening. Visit `http://localhost:3000/`. Never commit `.env` or credentials. Only explicitly listed frontend files and the existing SVG assets are served.
+`MONGODB_URI` is required; `MONGODB_DB_NAME` defaults to `pinch` and overrides any database specified in the URI. `PORT` defaults to `3000`. The server connects and pings MongoDB before listening. Visit `http://localhost:3000/`. Never commit `.env` or credentials. Only the `public/` folder is served to the browser; server code, tests and config are not.
 
 Open the app through the server URL, not directly as a `file://` page. The frontend loads and saves wishlist items through the API. On subsequent visits, an existing wishlist opens after the splash screen; an empty wishlist starts the onboarding flow. Uploaded JPEG, PNG, GIF and WebP images are limited to 2 MiB.
+
+## Project structure
+
+```
+public/                 Everything the browser loads
+  index.html            Page shell; loads the styles and scripts below
+  css/                  One stylesheet per screen, plus base.css and button-states.css
+  js/                   One script per screen; app.js loads last and wires them together
+    app.js              Startup, navigation between screens, API calls
+    onboarding.js       First-run onboarding screens
+    journey.js          First-item flow and the home (wishlist) screen
+    add-flow.js         "Add another item" flow
+    settings.js         Settings screen and shared settings helpers
+    item-actions.js     Wishlist card and its edit / unlock date / delete actions
+  assets/               SVG icons and illustrations
+src/server/             Node.js backend
+  index.js              Entry point: connects to MongoDB and starts listening
+  app.js                Express app: API routes, static files, errors
+  routes/items.js       /api/items
+  routes/settings.js    /api/settings
+  validation.js         Request validation and default settings
+test/                   API tests (run with npm test)
+```
 
 ## API
 
@@ -26,6 +49,8 @@ JSON responses use `Content-Type: application/json`.
 - MongoDB items include a UTC `createdAt` timestamp when available, used to display calendar lock and unlock dates.
 - Errors have the form `{ "error": "message" }`: `400` for invalid fields or malformed JSON, `413` for a request exceeding the 3 MiB JSON body limit, `404` for unknown routes, and `500` for database or server errors.
 
+- `PATCH /api/items/:id`: send any subset of the item fields below (same rules; `name` stays nonblank); returns `200 { "item": item }`, or `404` if the item does not exist.
+- `DELETE /api/items/:id`: removes the item; returns `204`, or `404` if it does not exist.
 - `GET /api/settings`: `200 { "settings": settings }`, using defaults for anything not yet saved.
 - `PUT /api/settings`: send any subset of the settings fields; returns `200 { "settings": settings }` with the merged result. Settings are shared like the wishlist and stored as one document in the `settings` collection.
 

@@ -30,7 +30,22 @@
     }
 
     function showHome() {
-        window.mountHome(root, { onAdd: showAdd, onSettings: showSettings, loadItems, settings });
+        window.mountHome(root, { onAdd: showAdd, onSettings: showSettings, onUpdate: updateItem, onDelete: deleteItem, loadItems, settings });
+    }
+
+    async function updateItem(id, patch) {
+        await api(`/api/items/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch)
+        });
+        showHome();
+    }
+
+    async function deleteItem(id) {
+        const response = await fetch(`/api/items/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!response.ok && response.status !== 404) throw new Error('Could not delete this item.');
+        showHome();
     }
 
     async function saveItem(item) {
@@ -51,7 +66,7 @@
     }
 
     function startJourney() {
-        window.mountJourney(root, { onComplete: saveItem, settings });
+        window.mountJourney(root, { onComplete: saveItem, onHome: showHome, onSettings: showSettings, settings });
     }
 
     window.setTimeout(async () => {

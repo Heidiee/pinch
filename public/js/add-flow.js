@@ -13,7 +13,8 @@
     </div>`;
 
   window.mountAddFlow = function mountAddFlow(root, { onHome = () => {}, onComplete = () => {}, onSettings = () => {}, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
-    const item = { name: '', price: '', currency: settings.currency, image: null, goal: '', urgency: '', lockDuration: settings.defaultLockDuration, feeling: '' };
+    const blank = () => ({ name: '', price: '', currency: settings.currency, image: null, goal: '', urgency: '', lockDuration: settings.defaultLockDuration, feeling: '' });
+    const item = blank();
     let step = 0;
     const title = [
       'Add another item', 'Which goal are you reaching for with this item?', 'Do you need this item right now?',
@@ -29,7 +30,7 @@
       if (step === 3) body = `${choices('lockDuration', [['1 Day','coral'],['1 Week','orange'],['2 Weeks','green'],['1 Month','blue']], item.lockDuration, 'af-durations')}<label class="af-custom"><span class="af-sr">Custom lock duration</span><input name="lockDuration" placeholder="custom input" value="${escape(!['1 Day','1 Week','2 Weeks','1 Month'].includes(item.lockDuration) ? item.lockDuration : '')}"></label>`;
       if (step === 4) body = `<div class="af-feelings" role="group" aria-label="How do you feel?">${['Excited','Happy','Neutral','Sad','Upset'].map(name => `<button type="button" data-choice="feeling" data-value="${name}" aria-pressed="${item.feeling === name}">${image(name.toLowerCase())}<span>${name}</span></button>`).join('')}</div>`;
       if (step === 5) body = `<div class="af-summary">${illustration}<h1>Yay! you logged another item</h1><p class="af-summary-purple"><strong>${escape(item.name || 'Your item')}</strong>${item.goal ? ` for <strong>${escape(item.goal.toLowerCase())}</strong> purposes` : ''}.</p><p class="af-summary-blue">${item.lockDuration ? `It will be locked for <strong>${escape(item.lockDuration.toLowerCase())}</strong>.` : 'No lock duration selected.'}</p><p class="af-summary-green">${item.feeling ? `Paying for it makes you feel <strong>${escape(item.feeling.toLowerCase())}</strong>.` : 'No feeling selected.'}</p></div>${next('Go to home')}`;
-      root.innerHTML = `<section class="af-screen ${step === 5 ? 'af-complete' : ''}"><header class="af-brand">${image('logo')}<span>Pinch</span></header><div class="af-content"><div class="af-pagination">${image(`page${step + 1}`)}</div>${heading}${body}</div>${step > 0 && step < 5 ? '<button type="button" class="af-back" data-action="back" aria-label="Back">‹ Back</button>' : ''}${step > 0 && step < 5 ? `<div class="af-actions">${next('Next')}<button type="button" class="af-skip" data-action="skip">Skip</button></div>` : ''}${step < 5 ? `<nav class="af-nav" aria-label="Main navigation"><button type="button" data-action="home" aria-label="Home">${image('home')}</button><button type="button" data-action="add" aria-label="Add item" aria-current="page">${image('add')}</button><button type="button" data-action="settings" aria-label="Settings">${image('info')}</button></nav>` : ''}</section>`;
+      root.innerHTML = `<section class="af-screen ${step === 5 ? 'af-complete' : ''}"><header class="af-brand">${image('logo')}<span>Pinch</span></header><div class="af-content"><div class="af-pagination">${image(`page${step + 1}`)}</div>${heading}${body}</div>${step > 0 && step < 5 ? `<div class="af-actions">${next('Next')}<div class="af-secondary"><button type="button" class="af-back" data-action="back">‹ Back</button><button type="button" class="af-skip" data-action="skip">Skip ›</button></div></div>` : ''}<nav class="af-nav" aria-label="Main navigation"><button type="button" data-action="home" aria-label="Home">${image('home')}</button><button type="button" data-action="add" aria-label="Add item" aria-current="page">${image('add')}</button><button type="button" data-action="settings" aria-label="Settings">${image('info')}</button></nav></section>`;
     }
     root.onclick = event => {
       const button = event.target.closest('button');
@@ -45,7 +46,7 @@
       }
       switch (button.dataset.action) {
         case 'home': onHome(); break;
-        case 'add': step = 0; render(); break;
+        case 'add': if (step === 5) Object.assign(item, blank()); step = 0; render(); break;
         case 'settings': onSettings(); break;
         case 'back': step--; render(); break;
         case 'skip': item[['', 'goal', 'urgency', 'lockDuration', 'feeling'][step]] = ''; step++; render(); break;

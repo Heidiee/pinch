@@ -19,9 +19,12 @@
     </div></div>`;
   }
   const tag = (label, color, selected, action = 'choice') => `<button type="button" class="pj-tag pj-${color}${selected ? ' is-selected' : ''}" data-action="${action}" data-value="${esc(label)}" aria-pressed="${selected}">${esc(label)}</button>`;
-  const navigation = () => `<div class="pj-nav">${next()}<button type="button" class="pj-skip" data-action="skip">Skip</button><button type="button" class="pj-back" data-action="back">Back</button></div>`;
+  const navigation = () => `<div class="pj-nav">${next()}<div class="pj-secondary"><button type="button" class="pj-back" data-action="back">‹ Back</button><button type="button" class="pj-skip" data-action="skip">Skip ›</button></div></div>`;
 
-  window.mountJourney = function mountJourney(root, { onComplete = () => {}, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
+  // Same floating nav as the add flow, with "+" as the current page.
+  const tabbar = '<nav class="pj-tabbar" aria-label="Main navigation"><button type="button" data-action="home" aria-label="Home"><img src="./assets/add/home.svg" alt=""></button><button type="button" data-action="nav-add" aria-label="Add item" aria-current="page"><img src="./assets/add/add.svg" alt=""></button><button type="button" data-action="settings" aria-label="Settings"><img src="./assets/add/info.svg" alt=""></button></nav>';
+
+  window.mountJourney = function mountJourney(root, { onComplete = () => {}, onHome = () => {}, onSettings = () => {}, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
     let step = 0;
     const item = { name: '', price: '', currency: settings.currency, image: null, goal: '', urgency: '', lockDuration: settings.defaultLockDuration, feeling: '' };
     const nodes = ['17:1839', '17:1922', '17:2025', '17:2102', '17:2174', '20:2237', '20:2427'];
@@ -34,13 +37,16 @@
       if (step === 4) body = `<div class="pj-heading"><h1>Take some time to make sure it’s a keeper.</h1><p>You can lock the item for a while, giving you the space to make a decision you’ll feel great about.</p></div><div class="pj-options pj-duration">${[['1 Day','coral'],['1 Week','orange'],['2 Weeks','green'],['1 Month','blue']].map(([v,c]) => tag(v,c,item.lockDuration === v)).join('')}<label class="pj-custom"><span class="pj-sr">Custom lock duration</span><input name="custom" placeholder="custom input" value="${esc(!['1 Day','1 Week','2 Weeks','1 Month'].includes(item.lockDuration) ? item.lockDuration : '')}"></label></div>${navigation(step)}`;
       if (step === 5) body = `<div class="pj-heading"><h1>How does spending money on this item make you feel?</h1></div><div class="pj-moods">${['Excited','Happy','Neutral','Sad','Upset'].map(v => `<button type="button" data-action="choice" data-value="${v}" class="pj-mood${item.feeling === v ? ' is-selected' : ''}" aria-pressed="${item.feeling === v}">${img(v.toLowerCase() + (item.feeling === v ? '-selected' : ''))}<span>${v}</span></button>`).join('')}</div>${navigation(step)}`;
       if (step === 6) body = `<div class="pj-polaroid pj-summary">${illustration(true)}<h1>Nice! you logged your first item</h1><div class="pj-summary-line pj-purple">${item.name ? `<strong>${esc(item.name)}</strong>` : 'Your item'}${item.goal ? ` for <strong>${esc(item.goal.toLowerCase())}</strong> purposes` : ''}.</div><div class="pj-summary-line pj-blue">${item.lockDuration ? `It will be locked for <strong>${esc(item.lockDuration.toLowerCase())}</strong>.` : 'No lock duration selected.'}</div><div class="pj-summary-line pj-green">${item.feeling ? `Paying for it makes you feel <strong>${esc(item.feeling.toLowerCase())}</strong>.` : 'No feeling selected.'}</div></div><div class="pj-intro-next">${next()}</div><button type="button" class="pj-back pj-summary-back" data-action="back">Back</button>`;
-      root.innerHTML = `<section class="pj-screen" data-node-id="${nodes[step]}"><header class="pj-brand">${img('logo')}<span>Pinch</span></header><div class="pj-content"><div class="pj-progress">${img('page' + (step + 1))}</div>${body}</div></section>`;
+      root.innerHTML = `<section class="pj-screen" data-node-id="${nodes[step]}"><header class="pj-brand">${img('logo')}<span>Pinch</span></header><div class="pj-content"><div class="pj-progress">${img('page' + (step + 1))}</div>${body}</div>${tabbar}</section>`;
     }
     root.onclick = (event) => {
       const button = event.target.closest('[data-action]');
       if (!button || !root.contains(button)) return;
       const action = button.dataset.action;
-      if (action === 'back') { step = Math.max(0, step - 1); render(); }
+      if (action === 'home') onHome();
+      else if (action === 'settings') onSettings();
+      else if (action === 'nav-add') { if (step !== 0) { step = 0; render(); } }
+      else if (action === 'back') { step = Math.max(0, step - 1); render(); }
       else if (action === 'next') {
         if (step === 1 && !item.name.trim()) {
           window.alert('Please enter an item name.');
@@ -96,7 +102,7 @@
     render();
   };
 
-  window.mountHome = function mountHome(root, { onAdd = () => {}, onSettings = () => {}, loadItems, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
+  window.mountHome = function mountHome(root, { onAdd = () => {}, onSettings = () => {}, onUpdate = async () => {}, onDelete = async () => {}, loadItems, settings = window.PINCH_DEFAULT_SETTINGS } = {}) {
     root.onclick = null;
     root.oninput = null;
     root.onchange = null;
@@ -104,24 +110,17 @@
     const loadingScreen = root.firstElementChild;
     Promise.resolve().then(loadItems).then(items => {
       if (root.firstElementChild !== loadingScreen) return;
-      renderHome(root, { onAdd, onSettings, settings }, items);
+      renderHome(root, { onAdd, onSettings, onUpdate, onDelete, settings }, items);
     }).catch(() => {
       if (root.firstElementChild !== loadingScreen) return;
       root.innerHTML = '<section class="pj-home"><div class="pj-home-inner"><h1>Your Wishlist</h1><p role="alert">Could not load your wishlist. Check your connection and try again.</p><button type="button" class="pj-next" data-action="retry">Retry</button></div></section>';
-      root.onclick = event => { if (event.target.closest('[data-action="retry"]')) window.mountHome(root, { onAdd, onSettings, loadItems, settings }); };
+      root.onclick = event => { if (event.target.closest('[data-action="retry"]')) window.mountHome(root, { onAdd, onSettings, onUpdate, onDelete, loadItems, settings }); };
     });
   };
 
-  function renderHome(root, { onAdd, onSettings, settings }, items) {
+  function renderHome(root, { onAdd, onSettings, onUpdate, onDelete, settings }, items) {
     const item = items[items.length - 1];
-    const trueCost = price => window.pinchTrueCost ? window.pinchTrueCost(price, settings) : (price === '' || price == null ? null : price);
-    const cards = items.map(entry => {
-      const name = entry.name || entry.title;
-      const category = entry.goal || entry.category || '';
-      const image = typeof entry.image === 'string' ? entry.image : '';
-      const price = entry.price ?? entry.cost;
-      return `<article class="pj-card pj-item" data-category="${esc(category.toLowerCase())}" data-name="${esc(String(name).toLowerCase())}"><div class="pj-card-heading"><h2>${esc(name)}</h2></div><div class="pj-item-image">${image ? `<img src="${esc(image)}" alt="${esc(name)}">` : ''}</div>${entry.lockDuration ? `<p>Locked for ${esc(entry.lockDuration)}</p>` : ''}${trueCost(price) !== null ? `<div class="pj-cost">${settings.showTaxInCost && Number(settings.taxRate) > 0 ? 'True cost' : 'Price'}: ${esc(trueCost(price))} ${esc(entry.currency || '')}</div>` : ''}</article>`;
-    }).join('');
+    const cards = items.map(entry => window.pinchItemCard(entry, settings)).join('');
     const categories = [['All','grey'], ...settings.categories.map(({ name, color }) => [name, color])];
     const date = new Date();
     const dates = Array.from({length: 7}, (_, i) => { const d = new Date(date.getFullYear(), date.getMonth(), date.getDate() + i); return `<div class="pj-date"><span>${d.toLocaleDateString(undefined,{weekday:'short'})}</span><div>${d.getDate()}${img('lock')}</div></div>`; }).join('');
@@ -137,7 +136,9 @@
     const filters = new Set(); // empty = All
     const search = root.querySelector('.pj-search input');
     const update = () => { const cards = [...root.querySelectorAll('.pj-item')]; let shown = 0; cards.forEach(card => { const visible = (!filters.size || filters.has(card.dataset.category)) && card.dataset.name.includes(search.value.trim().toLowerCase()); card.hidden = !visible; if (visible) shown++; }); root.querySelector('.pj-no-results').hidden = !cards.length || shown > 0; };
+    const itemActions = window.pinchItemActions(root, { items, settings, onUpdate, onDelete });
     root.onclick = (event) => {
+      if (itemActions(event)) return;
       const button = event.target.closest('[data-action]');
       if (!button || !root.contains(button)) return;
       if (button.dataset.action === 'add') onAdd();
