@@ -23,7 +23,8 @@
 .af-choices { width: 100%; display: flex; align-items: center; flex-direction: column; gap: 20px; }
 .af-choice { border: 1.5px solid #090708; border-radius: 5px; box-shadow: -2px 3px #090708; padding: 5px 8px; font-size: 18px !important; letter-spacing: -.18px; line-height: normal; }
 .af-choice[aria-pressed="true"], .af-feelings button[aria-pressed="true"] { outline: 3px solid #484a7e; outline-offset: 3px; }
-.af-purple { background: #dedff7; color: #484a7e !important; }.af-green { background: #dcd679; }.af-blue { background: #c9e4f6; }.af-coral { background: #ffa88b; }.af-orange { background: #f5bc66; }
+.af-purple { background: #dedff7; color: #484a7e !important; }.af-green { background: #dcd679; }.af-blue { background: #c9e4f6; }.af-coral { background: #ffa88b; }
+.af-grey { background: #dbdcda; }.af-orange { background: #f5bc66; }
 .af-goals { flex-direction: row; gap: 10px; padding: 0 1px; }.af-goals .af-choice { flex: 1; min-width: 0; }.af-goals .af-blue { color: #0064a7; }
 .af-urgency .af-choice { width: 150px; }.af-durations .af-choice { width: 90px; }
 .af-custom { margin-top: -15px; border: 1.5px solid #090708; border-radius: 5px; background: #dbdcda; box-shadow: -2px 3px #090708; padding: 5px 8px; }

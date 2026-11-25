@@ -3,7 +3,7 @@
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { ObjectId } = require('mongodb');
-const { createApp } = require('../server');
+const { createApp, DEFAULT_SETTINGS } = require('../server');
 
 let server;
 let base;
@@ -22,9 +22,22 @@ const collection = {
   }
 };
 
+let settingsDoc = null;
+const settingsCollection = {
+  async findOne() {
+    if (failDatabase) throw new Error('database unavailable');
+    return settingsDoc && structuredClone(settingsDoc);
+  },
+  async updateOne(filter, { $set }) {
+    if (failDatabase) throw new Error('database unavailable');
+    settingsDoc = { ...(settingsDoc || { _id: filter._id }), ...structuredClone($set) };
+    return { acknowledged: true };
+  }
+};
+
 before(async () => {
   documents = [];
-  server = createApp(collection).listen(0, '127.0.0.1');
+  server = createApp(collection, settingsCollection).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -115,5 +128,49 @@ test('serves only explicit frontend assets, not backend or hidden files', async 
     const response = await fetch(`${base}${pathname}`);
     assert.equal(response.status, 404, pathname);
     assert.deepEqual(await response.json(), { error: 'Not found' });
+  }
+});
+
+async function putSettings(body) {
+  return fetch(`${base}/api/settings`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+test('returns default settings before anything is saved', async () => {
+  settingsDoc = null;
+  const response = await fetch(`${base}/api/settings`);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { settings: DEFAULT_SETTINGS });
+});
+
+test('saves partial settings updates and keeps other values', async () => {
+  settingsDoc = null;
+  let response = await putSettings({ currency: 'USD', taxRate: 5, showTaxInCost: false });
+  assert.equal(response.status, 200);
+  response = await putSettings({ defaultLockDuration: '2 Weeks', categories: [{ name: ' Pets ', color: 'coral' }] });
+  const { settings } = await response.json();
+  assert.deepEqual(settings, { ...DEFAULT_SETTINGS, currency: 'USD', taxRate: 5, showTaxInCost: false, defaultLockDuration: '2 Weeks', categories: [{ name: 'Pets', color: 'coral' }] });
+  assert.deepEqual(await (await fetch(`${base}/api/settings`)).json(), { settings });
+  settingsDoc = null;
+});
+
+test('rejects invalid settings without saving', async () => {
+  settingsDoc = null;
+  const invalid = [null, [], { theme: 'dark' }, { currency: 'JPY' }, { taxRate: -1 }, { taxRate: 31 }, { taxRate: '13' },
+    { showTaxInCost: 'yes' }, { defaultLockDuration: '3 Days' }, { categories: 'Pets' },
+    { categories: [{ name: '', color: 'blue' }] }, { categories: [{ name: 'All', color: 'blue' }] },
+    { categories: [{ name: 'Pets', color: 'red' }] }, { categories: [{ name: 'Pets', color: 'blue', extra: 1 }] },
+    { categories: [{ name: 'Pets', color: 'blue' }, { name: 'pets', color: 'green' }] },
+    { categories: Array.from({ length: 13 }, (_, i) => ({ name: `C${i}`, color: 'blue' })) }];
+  for (const value of invalid) {
+    const response = await putSettings(value);
+    assert.equal(response.status, 400, JSON.stringify(value));
+    assert.equal(typeof (await response.json()).error, 'string');
+  }
+  assert.equal(settingsDoc, null);
+});
+
+test('serves the settings screen files', async () => {
+  for (const pathname of ['/settings.js', '/settings.css']) {
+    assert.equal((await fetch(`${base}${pathname}`)).status, 200, pathname);
   }
 });

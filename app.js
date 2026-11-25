@@ -1,5 +1,7 @@
 (() => {
     const root = document.getElementById('app');
+    let settings = window.PINCH_DEFAULT_SETTINGS;
+
     async function api(path, options) {
         const response = await fetch(path, options);
         const data = await response.json();
@@ -7,11 +9,28 @@
         return data;
     }
 
+    const loadItems = async () => (await api('/api/items')).items;
+
+    async function loadSettings() {
+        try {
+            settings = (await api('/api/settings')).settings;
+        } catch {
+            // Keep the last known (or default) settings so the app still works offline.
+        }
+        return settings;
+    }
+
+    async function saveSettings(patch) {
+        settings = (await api('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch)
+        })).settings;
+        return settings;
+    }
+
     function showHome() {
-        window.mountHome(root, {
-            onAdd: showAdd,
-            loadItems: async () => (await api('/api/items')).items
-        });
+        window.mountHome(root, { onAdd: showAdd, onSettings: showSettings, loadItems, settings });
     }
 
     async function saveItem(item) {
@@ -24,16 +43,20 @@
     }
 
     function showAdd() {
-        window.mountAddFlow(root, { onHome: showHome, onComplete: saveItem });
+        window.mountAddFlow(root, { onHome: showHome, onComplete: saveItem, onSettings: showSettings, settings });
+    }
+
+    function showSettings() {
+        window.mountSettings(root, { settings, loadItems, saveSettings, onHome: showHome, onAdd: showAdd });
     }
 
     function startJourney() {
-        window.mountJourney(root, { onComplete: saveItem });
+        window.mountJourney(root, { onComplete: saveItem, settings });
     }
 
     window.setTimeout(async () => {
         try {
-            const { items } = await api('/api/items');
+            const [items] = await Promise.all([loadItems(), loadSettings()]);
             if (items.length) showHome();
             else window.mountOnboarding(root, startJourney);
         } catch {

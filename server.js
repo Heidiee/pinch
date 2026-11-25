@@ -9,8 +9,25 @@ const FIELDS = ['name', 'price', 'currency', 'image', 'goal', 'urgency', 'lockDu
 const TEXT_LIMITS = { name: 200, currency: 10, goal: 100, urgency: 100, lockDuration: 100, feeling: 100 };
 const FRONTEND_FILES = new Set([
   'index.html', 'app.js', 'journey.js', 'add-flow.js', 'onboarding.js',
-  'journey.css', 'calendar.css', 'add-flow.css', 'onboarding.css', 'button-states.css', 'pinch-logo.svg'
+  'journey.css', 'calendar.css', 'add-flow.css', 'onboarding.css', 'button-states.css', 'pinch-logo.svg',
+  'settings.js', 'settings.css'
 ]);
+const SETTINGS_ID = 'app';
+const CURRENCIES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD'];
+const LOCK_DURATIONS = ['', '1 Day', '1 Week', '2 Weeks', '1 Month'];
+const CATEGORY_COLORS = ['purple', 'green', 'blue', 'coral', 'orange', 'grey'];
+const DEFAULT_SETTINGS = Object.freeze({
+  currency: 'CAD',
+  defaultLockDuration: '',
+  taxRate: 13,
+  showTaxInCost: true,
+  categories: [
+    { name: 'Essentials', color: 'purple' },
+    { name: 'Education', color: 'green' },
+    { name: 'Fashion', color: 'blue' },
+    { name: 'Travel', color: 'purple' }
+  ]
+});
 
 function validateItem(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return 'Request body must be an object';
@@ -42,7 +59,38 @@ function validateItem(body) {
   return null;
 }
 
-function createApp(collection) {
+// Validates a partial settings update; returns an error message or null.
+function validateSettings(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'Request body must be an object';
+  if (Object.keys(body).some(key => !(key in DEFAULT_SETTINGS))) return 'Unknown settings field';
+  if (body.currency !== undefined && !CURRENCIES.includes(body.currency)) return `currency must be one of ${CURRENCIES.join(', ')}`;
+  if (body.defaultLockDuration !== undefined && !LOCK_DURATIONS.includes(body.defaultLockDuration)) return 'defaultLockDuration is not a supported duration';
+  if (body.taxRate !== undefined && (typeof body.taxRate !== 'number' || !Number.isFinite(body.taxRate) || body.taxRate < 0 || body.taxRate > 30)) return 'taxRate must be a number from 0 to 30';
+  if (body.showTaxInCost !== undefined && typeof body.showTaxInCost !== 'boolean') return 'showTaxInCost must be a boolean';
+  if (body.categories !== undefined) {
+    const { categories } = body;
+    if (!Array.isArray(categories) || categories.length > 12) return 'categories must be an array of at most 12 entries';
+    const names = new Set();
+    for (const category of categories) {
+      if (!category || typeof category !== 'object' || Array.isArray(category) || Object.keys(category).some(key => key !== 'name' && key !== 'color')) return 'each category must have only name and color';
+      if (typeof category.name !== 'string' || !category.name.trim() || category.name.trim().length > 30) return 'category name must be 1 to 30 characters';
+      if (category.name.trim().toLowerCase() === 'all') return 'category name "All" is reserved';
+      if (!CATEGORY_COLORS.includes(category.color)) return `category color must be one of ${CATEGORY_COLORS.join(', ')}`;
+      const key = category.name.trim().toLowerCase();
+      if (names.has(key)) return 'category names must be unique';
+      names.add(key);
+    }
+  }
+  return null;
+}
+
+function serializeSettings(doc) {
+  const result = {};
+  for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) result[key] = doc && doc[key] !== undefined ? doc[key] : value;
+  return result;
+}
+
+function createApp(collection, settingsCollection) {
   const app = express();
   app.disable('x-powered-by');
   app.use('/api', express.json({ limit: '3mb', strict: false }));
@@ -65,6 +113,24 @@ function createApp(collection) {
     try {
       const result = await collection.insertOne(item);
       res.status(201).json({ item: serializeItem({ ...item, _id: result.insertedId }) });
+    } catch (err) { next(err); }
+  });
+
+  app.get('/api/settings', async (req, res, next) => {
+    try {
+      res.json({ settings: serializeSettings(settingsCollection && await settingsCollection.findOne({ _id: SETTINGS_ID })) });
+    } catch (err) { next(err); }
+  });
+
+  app.put('/api/settings', async (req, res, next) => {
+    const error = validateSettings(req.body);
+    if (error) return res.status(400).json({ error });
+    if (!settingsCollection) return next(new Error('settings storage unavailable'));
+    const update = { ...req.body };
+    if (update.categories) update.categories = update.categories.map(({ name, color }) => ({ name: name.trim(), color }));
+    try {
+      await settingsCollection.updateOne({ _id: SETTINGS_ID }, { $set: update }, { upsert: true });
+      res.json({ settings: serializeSettings(await settingsCollection.findOne({ _id: SETTINGS_ID })) });
     } catch (err) { next(err); }
   });
 
@@ -107,7 +173,7 @@ async function start() {
     await client.connect();
     const db = client.db(process.env.MONGODB_DB_NAME || 'pinch');
     await db.command({ ping: 1 });
-    const server = createApp(db.collection('items')).listen(Number(port));
+    const server = createApp(db.collection('items'), db.collection('settings')).listen(Number(port));
     server.on('error', async () => {
       console.error('Failed to start server');
       await client.close();
@@ -127,4 +193,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createApp, validateItem, start };
+module.exports = { createApp, validateItem, validateSettings, DEFAULT_SETTINGS, start };
