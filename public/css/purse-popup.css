@@ -1,0 +1,154 @@
+/* Purse popups (js/purse-popup.js): "You earned it" when an item is bought (Figma 313:3166) and
+   "You're saving!" when one is deleted (Figma 308:5391). Each purse copies its Figma animation (a 2s
+   loop). Every movement, and the popup's own bounce, uses Figma's back ease-in-out curve --pb-back;
+   colour changes ease in and out smoothly instead. */
+.pb-pop { --pb-back: cubic-bezier(.68, -.6, .32, 1.8); }
+/* Covers the whole screen, top to bottom, with the content centred. */
+.pj-sheet.pb-pop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  max-width: none;
+  height: var(--app-h, 100dvh);
+  max-height: none;
+  margin: 0;
+  padding: 40px 30px;
+  border: 0;
+  border-radius: 0;
+  background: #efedee;
+  box-shadow: none;
+  cursor: pointer;
+}
+.pj-sheet.pb-pop::backdrop { background: transparent; }
+
+/* The whole popup bounces in and out on Figma's back ease-in-out curve (--pb-back). */
+.pj-sheet.pb-pop[open] { animation: pb-bounce-in 600ms var(--pb-back) both; }
+.pj-sheet.pb-pop.is-leaving { animation: pb-bounce-out 450ms var(--pb-back) both; }
+@keyframes pb-bounce-in { from { opacity: 0; scale: .5; } to { opacity: 1; scale: 1; } }
+@keyframes pb-bounce-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .5; } }
+
+.pb-text { margin: 0; color: #090708; font: 400 22.857px/normal "Aleo", Georgia, serif; letter-spacing: -0.2286px; text-align: center; }
+
+/* Purse tile, laid out exactly like the Figma frame "logo" (169 × 169). */
+.pb-purse { position: relative; flex: none; width: 169px; height: 169px; overflow: hidden; border-radius: 15px; background: #090708; }
+.pb-purse img { display: block; max-width: none; }
+.pb-purse > *, .pb-cutout > * { position: absolute; }
+.pb-coin-top { left: 90.64px; top: 30.73px; width: 42.124px; height: 35.687px; display: flex; align-items: center; justify-content: center; }
+.pb-coin-top img { width: 36.504px; height: 27.655px; rotate: 14.05deg; }
+.pb-cutout { left: 26.12px; top: 41.48px; width: 117.277px; height: 96.791px; }
+.pb-clasp { inset: 0 6.74% 63.24% 4.95%; background: #fbf5f1; -webkit-mask: url(../assets/purse/top-clasp.svg) 0 0 / 100% 100% no-repeat; mask: url(../assets/purse/top-clasp.svg) 0 0 / 100% 100% no-repeat; }
+.pb-body { left: 0; top: 26%; width: 100%; height: 74%; } /* 117.28 × 71.63, not stretched */
+.pb-smile { inset: 68% 47.18% 29% 46.22%; display: flex; align-items: center; justify-content: center; }
+.pb-smile > div { position: relative; flex: none; width: 2.904px; height: 7.743px; transform: matrix(0, 1, 1, 0, 0, 0); }
+.pb-smile img { position: absolute; left: -66.67%; top: -25%; width: 233.34%; height: 150%; }
+.pb-coin-bottom { left: 58.38px; top: 117.93px; width: 36.602px; height: 17.481px; display: flex; align-items: center; justify-content: center; }
+.pb-coin-bottom img { width: 36.504px; height: 17.272px; rotate: .33deg; }
+.pb-eye { background: #090708; border-radius: 4.847px; }
+.pb-eye-right { inset: 56.05% 39.3% 37.09% 54.96%; }
+.pb-eye-left { inset: 56.03% 55.34% 37.1% 38.92%; }
+/* In the "saving" purse the eyes sit inside the purse cutout, a little lower and further apart. */
+.pb-cutout .pb-eye-right { inset: 55% 34.8% 33.01% 56.93%; }
+.pb-cutout .pb-eye-left { inset: 54.98% 57.92% 33.03% 33.82%; }
+.pb-coin { left: 29.19px; top: 96.79px; width: 40.348px; height: 40.348px; display: flex; align-items: center; justify-content: center; }
+.pb-coin > div { flex: none; transform: matrix(.9701037, .2426903, -.2426903, .9701037, 0, 0); }
+.pb-coin img { width: 33.268px; height: 33.268px; }
+.pb-blush { display: flex; align-items: center; justify-content: center; }
+.pb-blush > div { flex: none; width: 6.81px; height: 11.58px; border-radius: 4.847px; background: #ffa88b; transform: matrix(0, -1, 1, 0, 0, 0); }
+.pb-blush-right { inset: 60.63% 34.12% 35.34% 59.02%; }
+.pb-blush-left { inset: 60.63% 59.25% 35.34% 33.88%; }
+
+/* Figma's animations, copied keyframe for keyframe: one 2s timeline, looping while the popup is up.
+   Every transform is applied on screen (outside each layer's own rotation), like Figma does. */
+.pb-purse, .pb-clasp, .pb-eye, .pb-smile, .pb-coin, .pb-blush { animation: 2s linear 450ms infinite both; transform-origin: 50% 50%; }
+
+/* ── Bought: happy squint, a coin flies out, the tile turns olive. ── */
+.pb-pop--bought .pb-purse { animation-name: pb-tile-olive; }
+.pb-pop--bought .pb-clasp { animation-name: pb-clasp; }
+.pb-pop--bought .pb-eye { animation-name: pb-squint; }
+.pb-pop--bought .pb-smile { animation-name: pb-smile-squash; }
+.pb-pop--bought .pb-coin { animation-name: pb-coin-fly; }
+.pb-pop--bought .pb-blush { animation-name: pb-blush; }
+
+/* Tile: black, then olive (36.07% → 50.9%). Clasp: cream, then black, at the same moment.
+   Colour changes ease in and out smoothly instead of using the back curve. */
+@keyframes pb-tile-olive {
+  0% { background-color: #090708; }
+  36.073% { background-color: #090708; animation-timing-function: ease-in-out; }
+  50.897%, 100% { background-color: #dcd679; }
+}
+@keyframes pb-clasp {
+  0% { background-color: #fbf5f1; }
+  36.073% { background-color: #fbf5f1; animation-timing-function: ease-in-out; }
+  50.897%, 100% { background-color: #090708; }
+}
+/* Eyes squint to 44% height and lift 3.5px (0–20%), hold, then spring back (30–50%). */
+@keyframes pb-squint {
+  0% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  20% { transform: translateY(-3.499px) scaleY(.44); }
+  30% { transform: translateY(-3.499px) scaleY(.44); animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: none; }
+}
+/* Smile squashes to 78% height and lifts 4.1px on the same beats. */
+@keyframes pb-smile-squash {
+  0% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  20% { transform: translateY(-4.103851px) scaleY(.78); }
+  30% { transform: translateY(-4.103851px) scaleY(.78); animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: none; }
+}
+/* Cheeks lift 5.87px with the eyes. */
+@keyframes pb-blush {
+  0% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  20% { transform: translateY(-5.86853px); }
+  30.065% { transform: translateY(-5.86853px); animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: none; }
+}
+/* The coin waits, then shoots straight up 138px and out of the tile (36.77% → 50%). */
+@keyframes pb-coin-fly {
+  0% { transform: none; }
+  36.77% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: translateY(-137.964539px); }
+}
+
+/* ── Saved: a wink and a tilted smile, the coin puffs up, the tile turns blue. ── */
+.pb-pop--saved .pb-purse { animation-name: pb-tile-blue; }
+.pb-pop--saved .pb-eye-right { animation-name: pb-wink; }
+.pb-pop--saved .pb-smile { animation-name: pb-smile-tilt; transform-origin: 0 0; }
+.pb-pop--saved .pb-coin { animation-name: pb-coin-puff; }
+
+/* Tile: black, then Pinch blue (36.07% → 50.9%), easing smoothly instead of using the back curve. */
+@keyframes pb-tile-blue {
+  0% { background-color: #090708; }
+  36.073% { background-color: #090708; animation-timing-function: ease-in-out; }
+  50.897%, 100% { background-color: #0064a7; }
+}
+/* Right eye winks to 62% height (0–20%), holds, then opens again (30–50%). */
+@keyframes pb-wink {
+  0% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  20% { transform: translateY(-.038px) scaleY(.62); }
+  30% { transform: translateY(-.038px) scaleY(.62); animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: none; }
+}
+/* Smile tilts 5° (0.087 rad) around its top-left corner on the same beats. */
+@keyframes pb-smile-tilt {
+  0%, 0.029% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  20% { transform: rotate(-.087266rad); }
+  30% { transform: rotate(-.087266rad); animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: none; }
+}
+/* The coin puffs up to 107% and lifts 3px, then settles. */
+@keyframes pb-coin-puff {
+  0% { transform: none; animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  20% { transform: translateY(-2.964539px) scale(1.07); }
+  30% { transform: translateY(-2.964539px) scale(1.07); animation-timing-function: cubic-bezier(.68, -.6, .32, 1.8); }
+  50%, 100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-pop[open], .pb-pop.is-leaving { animation-duration: 1ms !important; animation-delay: 0s !important; }
+  .pb-purse, .pb-purse * { animation-play-state: paused !important; }
+}

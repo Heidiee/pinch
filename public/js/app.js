@@ -67,6 +67,8 @@
     async function removeItem(id) {
         const response = await fetch(`/api/items/${encodeURIComponent(id)}`, { method: 'DELETE' });
         if (!response.ok && response.status !== 404) throw new Error('Could not delete this item.');
+        // Letting an item go is money saved: celebrate it (js/purse-popup.js).
+        if (window.pinchSavedPopup) window.pinchSavedPopup();
     }
 
     // Item bottom sheet: opens over the wishlist and refreshes it on close if anything changed.
@@ -110,13 +112,23 @@
         window.mountJourney(root, { onComplete: saveItem, onHome: showHome, onSettings: showSettings, settings });
     }
 
+    // Every app load (including a refresh) starts at the onboarding flow. Once on home, the + button
+    // uses the normal add flow, so onboarding only shows again on the next refresh.
     window.setTimeout(async () => {
-        try {
-            const [items] = await Promise.all([loadItems(), loadSettings()]);
-            if (items.length) showHome();
-            else window.mountOnboarding(root, startJourney);
-        } catch {
-            showHome();
-        }
+        await loadSettings();
+        window.mountOnboarding(root, finishOnboarding, { categories: settings.categories });
     }, 2500);
+
+    // The categories picked on the last onboarding step become the home filters (and the goals offered
+    // when adding items). Picking none keeps the current ones.
+    async function finishOnboarding(categories) {
+        if (categories && categories.length) {
+            try {
+                await saveSettings({ categories });
+            } catch {
+                settings = { ...settings, categories }; // offline: use them for this visit
+            }
+        }
+        startJourney();
+    }
 })();

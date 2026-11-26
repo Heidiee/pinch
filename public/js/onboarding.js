@@ -32,9 +32,14 @@
       ${box('ob-grey',39,89.6,17,12,'ob-map-tilt')}${box('ob-grey',60,92.1,28,4,'ob-map-tilt')}${box('ob-grey',59.6,99.1,28,4,'ob-map-tilt')}`;
   }
 
-  window.mountOnboarding = function mountOnboarding(root, onComplete) {
+  // The last step ("What does your wish list mean to you?") picks the categories that become the
+  // home filters. Several can be picked; the current categories start selected.
+  const OPTIONS = [['Essentials', 'purple'], ['Education', 'green'], ['Fashion', 'blue'], ['Pets', 'blue'], ['Travel', 'purple']];
+
+  window.mountOnboarding = function mountOnboarding(root, onComplete, { categories = [] } = {}) {
     let step = 0;
-    let selected = '';
+    const current = new Map(categories.map((category) => [category.name.toLowerCase(), category]));
+    const selected = new Set(OPTIONS.map(([name]) => name).filter((name) => current.has(name.toLowerCase())));
     const labels = ['A more mindful way of fulfilling your wishlist.', 'Its not about buying less,', 'What does your wish list mean to you?'];
     function render() {
       root.innerHTML = `<section class="ob-screen" aria-label="Onboarding">
@@ -42,19 +47,24 @@
         <div class="ob-content ${step === 2 ? 'ob-last' : ''}">
           <img class="ob-pagination" src="${asset(`page${step + 1}`)}" alt="Step ${step + 1} of 3">
           <div class="ob-card"><div class="ob-art ob-art-${step + 1}" aria-hidden="true"><div class="ob-art-canvas">${artwork(step)}</div></div>
-            <h1>${labels[step]}</h1>${step === 1 ? '<p>Pause and consider how certain items make you feel, does it align with your current goals and aspirations?</p>' : ''}</div>
-          ${step === 2 ? `<div class="ob-options" aria-label="Wishlist categories">${['Essentials', 'Education', 'Fashion', 'Pets', 'Travel'].map((label, index) => `<button type="button" class="ob-option ob-option-${index}" aria-pressed="${selected === label}">${label}</button>`).join('')}</div>` : ''}
+            <h1>${labels[step]}</h1>${step === 1 ? '<p>Pause and consider how certain items make you feel, does it align with your current goals and aspirations?</p>' : step === 2 ? '<p>Pick all that apply.</p>' : ''}</div>
+          ${step === 2 ? `<div class="ob-options" aria-label="Wishlist categories">${OPTIONS.map(([label], index) => `<button type="button" class="ob-option ob-option-${index}" data-value="${label}" aria-pressed="${selected.has(label)}">${label}</button>`).join('')}</div>` : ''}
           <div class="ob-actions">${step ? '<button class="ob-back" type="button" aria-label="Go back">Back</button>' : ''}<button class="ob-next" type="button">${step === 0 ? 'Start my journey' : step === 1 ? 'next' : 'Continue'}<img src="${asset('arrow')}" alt=""></button></div>
         </div></section>`;
       root.querySelector('.ob-next').addEventListener('click', () => {
-        if (step === 2) { if (typeof onComplete === 'function') onComplete(); }
+        if (step === 2) {
+          // Keep each picked category's existing colour (if the user changed it in settings).
+          const picked = OPTIONS.filter(([name]) => selected.has(name)).map(([name, color]) => current.get(name.toLowerCase()) || { name, color });
+          if (typeof onComplete === 'function') onComplete(picked);
+        }
         else { step += 1; render(); }
       });
       const back = root.querySelector('.ob-back');
       if (back) back.addEventListener('click', () => { step -= 1; render(); });
       root.querySelectorAll('.ob-option').forEach((button) => button.addEventListener('click', () => {
-        selected = selected === button.textContent ? '' : button.textContent;
-        root.querySelectorAll('.ob-option').forEach((option) => option.setAttribute('aria-pressed', String(option.textContent === selected)));
+        const value = button.dataset.value;
+        if (selected.has(value)) selected.delete(value); else selected.add(value);
+        button.setAttribute('aria-pressed', String(selected.has(value)));
       }));
     }
     render();

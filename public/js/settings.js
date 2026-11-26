@@ -141,7 +141,7 @@
 
         <p class="ps-status" role="status" aria-live="polite">${esc(status)}</p>
       </div>
-      <nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home" data-action="home">${img('home-inactive')}</button><button type="button" aria-label="Add item" data-action="add">${img('add')}</button><button type="button" aria-label="Settings" aria-current="page">${img('info-active')}</button></nav></section>`;
+      <nav class="pj-tabbar" aria-label="Main navigation"><button type="button" aria-label="Home" data-action="home"><span class="pj-nav-icon pj-nav-home"></span></button><button type="button" aria-label="Add item" data-action="add"><span class="pj-nav-icon pj-nav-add"></span></button><button type="button" aria-label="Settings" aria-current="page"><span class="pj-nav-icon pj-nav-info"></span></button></nav></section>`;
     }
 
     async function save(patch) {

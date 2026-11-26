@@ -134,6 +134,13 @@
     zoom: var(--device-scale, 1);
     width: min(var(--device-w) - 32px, 362px);
   }
+  /* The bought popup fills the phone screen exactly. */
+  .pj-sheet.pb-pop {
+    inset: calc(var(--screen-top, 0px) / var(--device-scale, 1)) auto auto calc(var(--screen-left, 0px) / var(--device-scale, 1));
+    width: var(--device-w);
+    height: var(--app-h);
+    border-radius: var(--screen-radius);
+  }
   .pd-sheet::backdrop,
   .pj-sheet::backdrop {
     clip-path: inset(var(--screen-top, 0px) var(--screen-right, 0px) var(--screen-bottom, 0px) var(--screen-left, 0px) round var(--screen-r, 0px));

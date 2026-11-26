@@ -67,3 +67,12 @@
 .pj-sheet-chip .pj-tag { display: inline-block; font-size: var(--pj-text-body) !important; transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease; }
 .pj-sheet-chip input:not(:checked) + .pj-tag { border-color: #d9d9d9; background: #fdfdfd; color: var(--pj-grey); box-shadow: none; }
 .pj-sheet-chip input:focus-visible + .pj-tag { outline: 2px solid #0064a7; outline-offset: 3px; }
+
+/* Bought items are greyed out: the photo, mascot, title and details fade to grey. The action button
+   stays in full colour so the item can still be edited, un-bought or deleted. */
+.pj-item .pj-item-head, .pj-item .pj-item-info, .pj-item .pj-item-image > img { transition: filter 300ms ease, opacity 300ms ease; }
+.pj-item .pj-item-image { transition: background-color 300ms ease; }
+.pj-item.is-bought .pj-item-head,
+.pj-item.is-bought .pj-item-info { filter: grayscale(1); opacity: .5; }
+.pj-item.is-bought .pj-item-image { background: #dbdcda; }
+.pj-item.is-bought .pj-item-image > img { filter: grayscale(1); opacity: .5; }

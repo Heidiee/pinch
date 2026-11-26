@@ -195,7 +195,10 @@
         case 'item-bought': {
           if (!item) return true;
           button.disabled = true;
-          Promise.resolve(onUpdate(item.id, { boughtAt: item.boughtAt ? null : new Date().toISOString() })).catch(() => {
+          const buying = !item.boughtAt;
+          Promise.resolve(onUpdate(item.id, { boughtAt: buying ? new Date().toISOString() : null })).then(() => {
+            if (buying && window.pinchBoughtPopup) window.pinchBoughtPopup();
+          }, () => {
             button.disabled = false;
             window.alert('Could not update this item. Check your connection and try again.');
           });
