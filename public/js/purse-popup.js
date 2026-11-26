@@ -28,7 +28,7 @@
   };
 
   const HOLD_MS = 5000; // how long the popup stays before closing itself
-  const LEAVE_MS = 460; // matches the bounce-out in css/purse-popup.css
+  const LEAVE_MS = 410; // matches the slide-out in css/purse-popup.css
 
   function pursePopup(kind) {
     const variant = VARIANTS[kind];
@@ -36,7 +36,7 @@
     const dialog = document.createElement('dialog');
     dialog.className = `pj-sheet pb-pop pb-pop--${kind}`;
     dialog.setAttribute('aria-label', variant.label);
-    dialog.innerHTML = `<div class="pb-art"><div class="pb-purse" aria-hidden="true">${variant.purse}</div></div><p class="pb-text" role="status">${variant.text}</p>`;
+    dialog.innerHTML = `<div class="pb-panel"><div class="pb-art"><div class="pb-purse" aria-hidden="true">${variant.purse}</div></div><p class="pb-text" role="status">${variant.text}</p></div>`;
     document.body.append(dialog);
     let timer = 0;
     const close = () => {

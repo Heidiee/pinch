@@ -1,36 +1,52 @@
 /* Purse popups (js/purse-popup.js): "You earned it" when an item is bought (Figma 313:3166) and
    "You're saving!" when one is deleted (Figma 308:5391). Each purse copies its Figma animation (a 2s
-   loop). Every movement, and the popup's own bounce, uses Figma's back ease-in-out curve --pb-back;
-   colour changes ease in and out smoothly instead. */
+   loop). Every purse movement uses Figma's back ease-in-out curve --pb-back; colour changes ease in
+   and out smoothly, and the popup's slide up uses its own gentler curve. */
 .pb-pop { --pb-back: cubic-bezier(.68, -.6, .32, 1.8); }
-/* Covers the whole screen, top to bottom, with the content centred. */
+/* The dialog covers the whole screen and clips its panel, so the slide stays inside the screen
+   (and inside the phone frame on desktop). */
 .pj-sheet.pb-pop {
   position: fixed;
   inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
+  display: block;
+  overflow: hidden;
   width: 100%;
   max-width: none;
   height: var(--app-h, 100dvh);
   max-height: none;
   margin: 0;
-  padding: 40px 30px;
+  padding: 0;
   border: 0;
   border-radius: 0;
-  background: #efedee;
+  background: transparent;
   box-shadow: none;
   cursor: pointer;
 }
+.pj-sheet.pb-pop[open] { animation: none; }
 .pj-sheet.pb-pop::backdrop { background: transparent; }
 
-/* The whole popup bounces in and out on Figma's back ease-in-out curve (--pb-back). */
-.pj-sheet.pb-pop[open] { animation: pb-bounce-in 600ms var(--pb-back) both; }
-.pj-sheet.pb-pop.is-leaving { animation: pb-bounce-out 450ms var(--pb-back) both; }
-@keyframes pb-bounce-in { from { opacity: 0; scale: .5; } to { opacity: 1; scale: 1; } }
-@keyframes pb-bounce-out { from { opacity: 1; scale: 1; } to { opacity: 0; scale: .5; } }
+/* The panel holds the background and content. It reaches 200px below the screen so the curve's
+   overshoot never shows a gap at the bottom; the extra padding keeps the content centred on screen. */
+.pb-panel {
+  position: absolute;
+  inset: 0 0 -200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 40px 30px 240px;
+  background: #efedee;
+}
+
+/* The whole popup slides up into view, and slides up and away when it closes. The slide uses a
+   gentle curve of its own: no dip at the start and only a slight settle at the end (the purse
+   animation keeps Figma's stronger back curve). */
+.pb-pop { --pb-slide-in: cubic-bezier(.22, 1.15, .36, 1); --pb-slide-out: cubic-bezier(.55, 0, .75, .2); }
+.pb-pop[open] .pb-panel { animation: pb-slide-in 550ms var(--pb-slide-in) both; }
+.pb-pop.is-leaving .pb-panel { animation: pb-slide-out 400ms var(--pb-slide-out) both; }
+@keyframes pb-slide-in { from { translate: 0 100%; } to { translate: 0 0; } }
+@keyframes pb-slide-out { from { translate: 0 0; } to { translate: 0 -100%; } }
 
 .pb-text { margin: 0; color: #090708; font: 400 22.857px/normal "Aleo", Georgia, serif; letter-spacing: -0.2286px; text-align: center; }
 
@@ -149,6 +165,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pb-pop[open], .pb-pop.is-leaving { animation-duration: 1ms !important; animation-delay: 0s !important; }
+  .pb-panel { animation-duration: 1ms !important; animation-delay: 0s !important; }
   .pb-purse, .pb-purse * { animation-play-state: paused !important; }
 }
